@@ -1,0 +1,5 @@
+app.py
+engine.py
+requirements.txt
+matrizjugadorescompleta.parquet
+Todo/

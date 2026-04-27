@@ -1,0 +1,15 @@
+# Ignorar todo por defecto
+*
+
+# Permitir solo lo necesario para desplegar la app
+!.gitignore
+!app.py
+!engine.py
+!requirements.txt
+!matrizjugadorescompleta.parquet
+
+# Permitir solo el prototipo merged weighted necesario
+!Todo/
+!Todo/clustering_roles_merged_v4/
+!Todo/clustering_roles_merged_v4/team_position_prototypes_merged_v4/
+!Todo/clustering_roles_merged_v4/team_position_prototypes_merged_v4/merged_team_position_prototype_weighted_v4.csv

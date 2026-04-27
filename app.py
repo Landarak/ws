@@ -2,6 +2,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import hashlib
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -127,6 +128,13 @@ FEATURE_SET = "full"
 PENALTY_PROFILE = "medium"
 ALLOWED_LEAGUES = None
 
+POSITION_LABELS = {
+    "LEFT_ATTACK_WIDE": "LAW",
+    "LEFT_WIDE_MID": "LWM",
+    "RIGHT_ATTACK_WIDE": "RAW",
+    "RIGHT_WIDE_MID": "RWM",
+}
+
 BLOCK_LABELS = {
     "progression": "Progresión",
     "passing": "Pase",
@@ -171,7 +179,7 @@ def get_player_name(row: pd.Series) -> str:
     return "Jugador no disponible"
 
 
-def money_short(value) -> str:
+def money_short(value: Any) -> str:
     value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
     if pd.isna(value):
         return "No disponible"
@@ -182,14 +190,28 @@ def money_short(value) -> str:
     return f"€{value:.0f}"
 
 
-def format_foot(value) -> str:
+def format_foot(value: Any) -> str:
     if pd.isna(value):
         return "No disponible"
     raw = str(value).strip().lower()
     return FOOT_LABELS.get(raw, str(value))
 
 
-def safe_score(value) -> float | None:
+def format_group_pos(value: Any) -> str:
+    if pd.isna(value):
+        return "No disponible"
+    raw = str(value).strip()
+    return POSITION_LABELS.get(raw, raw)
+
+
+def format_height(value: Any) -> str:
+    numeric_value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(numeric_value):
+        return "No disponible"
+    return f"{numeric_value:.2f} m"
+
+
+def safe_score(value: Any) -> float | None:
     score = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
     if pd.isna(score):
         return None
@@ -224,6 +246,8 @@ def final_ranking_display(df: pd.DataFrame) -> pd.DataFrame:
     }
     out = out.rename(columns=rename_map)
 
+    if "Grupo posicional" in out.columns:
+        out["Grupo posicional"] = out["Grupo posicional"].map(format_group_pos)
     if "Pie" in out.columns:
         out["Pie"] = out["Pie"].map(format_foot)
     if "Altura" in out.columns:
@@ -237,182 +261,10 @@ def final_ranking_display(df: pd.DataFrame) -> pd.DataFrame:
     return out[[col for col in final_order if col in out.columns]]
 
 
-def build_selection_context(
-    team_name: str,
-    merged_pos: str,
-    shortlist_size: int,
-    exclude_same_team: bool,
-    preferred_foot=None,
-    min_height=None,
-    max_value_target=None,
-) -> str:
-    raw = f"{team_name}|{merged_pos}|{shortlist_size}|{exclude_same_team}|{preferred_foot}|{min_height}|{max_value_target}"
+def build_context_key(*items: Any) -> str:
+    raw = "|".join(str(x) for x in items)
     return hashlib.md5(raw.encode("utf-8")).hexdigest()[:16]
 
-
-def get_query_value(key: str):
-    try:
-        value = st.query_params.get(key, None)
-    except Exception:
-        value = st.experimental_get_query_params().get(key, [None])
-
-    if isinstance(value, list):
-        return value[0] if value else None
-    return value
-
-
-def get_selected_candidate_index(context_key: str, max_rows: int) -> int | None:
-    selected_context = get_query_value("selected_context")
-    if str(selected_context) != str(context_key):
-        return None
-
-    selected_raw = get_query_value("selected_candidate")
-    try:
-        selected_idx = int(selected_raw)
-    except (TypeError, ValueError):
-        return None
-
-    if 0 <= selected_idx < max_rows:
-        return selected_idx
-    return None
-
-
-def clear_selected_candidate_query_params():
-    st.session_state["selected_candidate_idx"] = None
-
-
-def format_height(value) -> str:
-    numeric_value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
-    if pd.isna(numeric_value):
-        return "NA"
-    return f"{numeric_value:.2f} m"
-
-
-def render_clickable_shortlist_table(display_df: pd.DataFrame, shortlist_df: pd.DataFrame):
-    """Renderiza una shortlist clicable con componentes nativos de Streamlit.
-
-    La versión HTML no podía actualizar el estado de Python de forma confiable.
-    Cada fila se presenta como un botón ancho para que el clic sí abra el detalle.
-    """
-    if display_df.empty:
-        st.info("No hay candidatos disponibles para mostrar.")
-        return
-
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stButton"] > button {
-            min-height: 58px;
-            justify-content: flex-start;
-            text-align: left;
-            border-radius: 14px;
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            background: #ffffff;
-            color: #0f172a;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-            padding: 0.75rem 1rem;
-            white-space: normal;
-        }
-        div[data-testid="stButton"] > button:hover {
-            border-color: rgba(37, 99, 235, 0.55);
-            background: #f0f9ff;
-            color: #0f172a;
-        }
-        div[data-testid="stButton"] > button:active {
-            background: #dbeafe;
-        }
-        .row-header {
-            display: grid;
-            grid-template-columns: 2.0fr 1.5fr 1.35fr .95fr .75fr .75fr .8fr;
-            gap: .75rem;
-            padding: 0 .9rem .35rem .9rem;
-            color: #64748b;
-            font-size: .72rem;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            font-weight: 800;
-        }
-        </style>
-        <div class="row-header">
-            <span>Jugador</span>
-            <span>Club</span>
-            <span>Grupo</span>
-            <span>Valor</span>
-            <span>Pie</span>
-            <span>Altura</span>
-            <span>Score</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    for idx, row in display_df.reset_index(drop=True).iterrows():
-        player = str(row.get("Jugador", "Jugador no disponible"))
-        club = str(row.get("Club", "Club no disponible"))
-        group = str(row.get("Grupo posicional", "Grupo no disponible"))
-        value_text = money_short(row.get("Valor de mercado", pd.NA))
-        foot = str(row.get("Pie", "NA"))
-        height_text = format_height(row.get("Altura", pd.NA))
-        score = safe_score(row.get("Score final", pd.NA))
-        score_text = f"{score:.1f}" if score is not None else "NA"
-
-        label = (
-            f"{idx + 1}. {player}  |  {club}  |  {group}  |  "
-            f"{value_text}  |  {foot}  |  {height_text}  |  Score {score_text}"
-        )
-
-        if st.button(label, key=f"candidate_row_{idx}", use_container_width=True):
-            st.session_state["selected_candidate_idx"] = idx
-            st.rerun()
-
-
-
-def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
-    """Tabla limpia y seleccionable por fila completa.
-
-    Usa el componente nativo de Streamlit para conservar el estilo visual de tabla,
-    pero permite abrir el detalle al seleccionar cualquier fila.
-    """
-    if display_df.empty:
-        st.info("No hay candidatos disponibles para mostrar.")
-        return []
-
-    table_event = st.dataframe(
-        display_df,
-        use_container_width=True,
-        hide_index=True,
-        height=min(640, 58 + 48 * len(display_df)),
-        on_select="rerun",
-        selection_mode="single-row",
-        key="shortlist_table",
-        column_config={
-            "Jugador": st.column_config.TextColumn("Jugador", width="medium"),
-            "Club": st.column_config.TextColumn("Club", width="small"),
-            "Grupo posicional": st.column_config.TextColumn("Grupo posicional", width="small"),
-            "Valor de mercado": st.column_config.TextColumn("Valor de mercado", width="small"),
-            "Pie": st.column_config.TextColumn("Pie", width="small"),
-            "Altura": st.column_config.TextColumn("Altura", width="small"),
-            "Score final": st.column_config.ProgressColumn(
-                "Score final",
-                min_value=0.0,
-                max_value=100.0,
-                format="%.1f",
-                width="medium",
-            ),
-        },
-    )
-
-    if isinstance(table_event, dict):
-        selection = table_event.get("selection", {})
-        rows = selection.get("rows", []) if isinstance(selection, dict) else []
-        return list(rows) if rows is not None else []
-
-    selection = getattr(table_event, "selection", None)
-    if selection is not None:
-        rows = getattr(selection, "rows", [])
-        return list(rows) if rows is not None else []
-
-    return []
 
 def block_display(block_df: pd.DataFrame) -> pd.DataFrame:
     if block_df.empty:
@@ -428,23 +280,6 @@ def block_display(block_df: pd.DataFrame) -> pd.DataFrame:
     return out[["Área", "Ajuste", "Lectura"]]
 
 
-def extract_selected_rows(table_event) -> list[int]:
-    if table_event is None:
-        return []
-
-    selection = getattr(table_event, "selection", None)
-    if selection is not None:
-        rows = getattr(selection, "rows", [])
-        return list(rows) if rows is not None else []
-
-    if isinstance(table_event, dict):
-        selection_dict = table_event.get("selection", {})
-        rows = selection_dict.get("rows", [])
-        return list(rows) if rows is not None else []
-
-    return []
-
-
 def get_inferred_base_position(proto_df: pd.DataFrame, team_name: str, merged_pos: str) -> str | None:
     preview = proto_df[
         (proto_df["event_team_name"].astype(str) == str(team_name))
@@ -456,6 +291,51 @@ def get_inferred_base_position(proto_df: pd.DataFrame, team_name: str, merged_po
     if "base_pos" in preview.columns and preview["base_pos"].notna().any():
         return str(preview["base_pos"].mode().iloc[0])
     return str(merged_pos)
+
+
+def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
+    if display_df.empty:
+        st.info("No hay candidatos disponibles para mostrar.")
+        return []
+
+    try:
+        table_event = st.dataframe(
+            display_df,
+            use_container_width=True,
+            hide_index=True,
+            height=min(640, 56 + 44 * len(display_df)),
+            on_select="rerun",
+            selection_mode="single-row",
+            column_config={
+                "Jugador": st.column_config.TextColumn("Jugador", width="medium"),
+                "Club": st.column_config.TextColumn("Club", width="small"),
+                "Grupo posicional": st.column_config.TextColumn("Grupo posicional", width="small"),
+                "Valor de mercado": st.column_config.TextColumn("Valor de mercado", width="small"),
+                "Pie": st.column_config.TextColumn("Pie", width="small"),
+                "Altura": st.column_config.TextColumn("Altura", width="small"),
+                "Score final": st.column_config.ProgressColumn(
+                    "Score final",
+                    min_value=0.0,
+                    max_value=100.0,
+                    format="%.1f",
+                    width="medium",
+                ),
+            },
+            key="shortlist_table",
+        )
+    except TypeError:
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            hide_index=True,
+            height=min(640, 56 + 44 * len(display_df)),
+        )
+        st.caption("Actualiza Streamlit para seleccionar filas directamente desde la tabla.")
+        return []
+
+    selection = table_event.get("selection", {}) if isinstance(table_event, dict) else {}
+    rows = selection.get("rows", []) if isinstance(selection, dict) else []
+    return list(rows) if rows is not None else []
 
 
 def compute_ranking(
@@ -527,13 +407,15 @@ def render_player_detail_content(
     selected_base_score = safe_score(selected_row.get(SCORE_METHOD))
     selected_base_score_text = f"{selected_base_score:.1f}" if selected_base_score is not None else "NA"
 
+    group_text = format_group_pos(selected_row.get("merged_pos", "Grupo no disponible"))
+
     st.markdown(
         f"""
         <div class="card" style="margin-top:0;">
             <div class="mini-label">Candidato seleccionado</div>
             <div class="candidate-name" style="font-size:1.35rem;color:#0f172a;">{selected_player}</div>
             <div class="muted">
-                {selected_row.get('event_team_name', 'Club no disponible')} · {selected_row.get('merged_pos', 'Grupo no disponible')}
+                {selected_row.get('event_team_name', 'Club no disponible')} · {group_text}
             </div>
         </div>
         """,
@@ -548,24 +430,14 @@ def render_player_detail_content(
     with d3:
         st.metric("Valor", money_short(selected_row.get("player_valuation", pd.NA)))
     with d4:
-        height_value = pd.to_numeric(pd.Series([selected_row.get("height", pd.NA)]), errors="coerce").iloc[0]
-        st.metric("Altura", f"{height_value:.2f} m" if pd.notna(height_value) else "NA")
+        st.metric("Altura", format_height(selected_row.get("height", pd.NA)))
 
-    diag_context = st.session_state.get("ranking_context", "default")
-    cache_key = f"{diag_context}|{selected_player}"
-    diag_cache = st.session_state.setdefault("player_diag_cache", {})
-
-    if cache_key not in diag_cache:
-        with st.spinner("Cargando detalle táctico..."):
-            _, block_df = engine.explain_player_vs_prototype(
-                result_df=raw_df,
-                proto_row=proto_row,
-                valid_cols=valid_cols,
-                player_name=selected_player,
-            )
-            diag_cache[cache_key] = block_df
-    else:
-        block_df = diag_cache[cache_key]
+    _, block_df = engine.explain_player_vs_prototype(
+        result_df=raw_df,
+        proto_row=proto_row,
+        valid_cols=valid_cols,
+        player_name=selected_player,
+    )
 
     readable_blocks = block_display(block_df)
     if readable_blocks.empty:
@@ -603,11 +475,6 @@ def render_player_detail_content(
                 "Ajuste": st.column_config.ProgressColumn("Ajuste", min_value=0, max_value=100, format="%.1f"),
             },
         )
-
-    if st.button("Cerrar detalle", use_container_width=True):
-        clear_selected_candidate_query_params()
-        st.rerun()
-
 
 
 def make_player_detail_dialog():
@@ -651,7 +518,12 @@ if not position_options:
     st.warning("No hay grupos posicionales disponibles para ese club.")
     st.stop()
 
-merged_pos = st.sidebar.selectbox("Grupo posicional buscado", position_options)
+merged_pos = st.sidebar.selectbox(
+    "Grupo posicional buscado",
+    position_options,
+    format_func=format_group_pos,
+)
+
 shortlist_size = st.sidebar.slider("Tamaño de la shortlist", min_value=5, max_value=50, value=20, step=5)
 exclude_same_team = st.sidebar.checkbox("Excluir jugadores del club objetivo", value=True)
 
@@ -684,10 +556,11 @@ with st.sidebar.expander("Preferencias de scouting", expanded=False):
             step=0.01,
         )
 
+        default_budget = float(max_value_target_team) if pd.notna(max_value_target_team) else 10_000_000.0
         max_value_target = st.number_input(
             "Presupuesto máximo por jugador",
             min_value=0.0,
-            value=float(max_value_target_team) if pd.notna(max_value_target_team) else 10_000_000.0,
+            value=default_budget,
             step=500_000.0,
         )
     else:
@@ -697,16 +570,15 @@ with st.sidebar.expander("Preferencias de scouting", expanded=False):
 
 
 # ======================================================
-# CÁLCULO
+# CÁLCULO CON CACHE DE SESIÓN
 # ======================================================
-ranking_context = build_selection_context(
-    team_name=team_name,
-    merged_pos=merged_pos,
-    shortlist_size=shortlist_size,
-    exclude_same_team=exclude_same_team,
-    preferred_foot=preferred_foot,
-    min_height=min_height,
-    max_value_target=max_value_target,
+ranking_context = build_context_key(
+    team_name,
+    merged_pos,
+    exclude_same_team,
+    preferred_foot,
+    min_height,
+    max_value_target,
 )
 
 if st.session_state.get("ranking_context") != ranking_context:
@@ -722,7 +594,6 @@ if st.session_state.get("ranking_context") != ranking_context:
             max_value_target=max_value_target,
         )
     st.session_state["ranking_context"] = ranking_context
-    st.session_state["player_diag_cache"] = {}
     st.session_state["ranking_raw_df"] = raw_df
     st.session_state["ranking_final_df"] = final_df
     st.session_state["ranking_proto_row"] = proto_row
@@ -750,7 +621,7 @@ st.markdown(
         <div class="pill">Scouting basado en compatibilidad táctica</div>
         <h1>Encuentra jugadores que encajan con el sistema de {team_name}</h1>
         <p>
-        Shortlist para <b>{merged_pos}</b>. El ranking prioriza jugadores cuyo perfil estadístico se aproxima
+        Shortlist para <b>{format_group_pos(merged_pos)}</b>. El ranking prioriza jugadores cuyo perfil estadístico se aproxima
         al prototipo táctico del club y ajusta el resultado con criterios prácticos de scouting.
         </p>
     </div>
@@ -775,7 +646,7 @@ with left:
         <div class="candidate-card">
             <div class="mini-label">Mejor candidato recomendado</div>
             <div class="candidate-name">{top_player}</div>
-            <div class="muted">{top.get('event_team_name', 'Club no disponible')} · {top.get('merged_pos', merged_pos)}</div>
+            <div class="muted">{top.get('event_team_name', 'Club no disponible')} · {format_group_pos(top.get('merged_pos', merged_pos))}</div>
             <div class="big-score">{top_score_text}</div>
             <div class="muted">Score final de compatibilidad</div>
         </div>
@@ -790,8 +661,7 @@ with right:
         st.metric("Pie", format_foot(top.get("foot", pd.NA)))
     with k2:
         st.metric("Valor de mercado", money_short(top.get("player_valuation", pd.NA)))
-        height_value = pd.to_numeric(pd.Series([top.get("height", pd.NA)]), errors="coerce").iloc[0]
-        st.metric("Altura", f"{height_value:.2f} m" if pd.notna(height_value) else "NA")
+        st.metric("Altura", format_height(top.get("height", pd.NA)))
 
 m1, m2, m3, m4 = st.columns(4)
 with m1:
@@ -811,8 +681,9 @@ with m4:
 st.markdown("## Shortlist recomendada")
 st.caption("Haz clic sobre cualquier fila del ranking para abrir el detalle táctico del jugador.")
 
-if st.session_state.get("selection_context") != ranking_context:
-    st.session_state["selection_context"] = ranking_context
+selection_context = build_context_key(ranking_context, shortlist_size)
+if st.session_state.get("selection_context") != selection_context:
+    st.session_state["selection_context"] = selection_context
     st.session_state["selected_candidate_idx"] = None
 
 selected_display_row = st.session_state.get("selected_candidate_idx")
@@ -825,12 +696,12 @@ if shortlist_display.empty:
 else:
     selected_rows = render_shortlist_dataframe(shortlist_display)
     if selected_rows:
-        st.session_state["selected_candidate_idx"] = int(selected_rows[0])
         selected_display_row = int(selected_rows[0])
+        st.session_state["selected_candidate_idx"] = selected_display_row
 
     csv_data = shortlist_display.to_csv(index=False).encode("utf-8")
     safe_team = str(team_name).replace(" ", "_")
-    safe_pos = str(merged_pos).replace(" ", "_")
+    safe_pos = format_group_pos(merged_pos).replace(" ", "_")
     st.download_button(
         "Descargar shortlist",
         data=csv_data,

@@ -452,6 +452,119 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
     .shortlist-player-name{font-size:.86rem}
 }
 
+
+/* ===== Estado inicial antes de la primera búsqueda ===== */
+.start-guide{
+    margin-top:.55rem;
+    border-radius:18px;
+    border:1px solid rgba(19,181,177,.30);
+    background:
+        radial-gradient(circle at 8% 16%, rgba(19,181,177,.18), transparent 28%),
+        linear-gradient(135deg, rgba(219,247,252,.88), rgba(255,255,255,.96));
+    box-shadow:0 12px 28px rgba(18,50,93,.07);
+    padding:1.05rem 1.15rem;
+}
+.start-guide-main{
+    display:grid;
+    grid-template-columns:56px 1fr;
+    gap:.85rem;
+    align-items:start;
+}
+.start-guide-icon{
+    width:50px;
+    height:50px;
+    border-radius:999px;
+    display:grid;
+    place-items:center;
+    background:rgba(19,181,177,.13);
+    border:1px solid rgba(19,181,177,.34);
+    color:var(--teal-dark);
+    font-size:1.35rem;
+    font-weight:950;
+}
+.start-guide-title{
+    color:var(--navy);
+    font-size:1.22rem;
+    font-weight:950;
+    line-height:1.1;
+    margin-bottom:.20rem;
+}
+.start-guide-text{
+    color:var(--muted);
+    font-size:.88rem;
+    line-height:1.35;
+    max-width:980px;
+}
+.start-guide-current{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.45rem;
+    margin-top:.62rem;
+}
+.start-guide-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    padding:.35rem .55rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.86);
+    border:1px solid rgba(18,50,93,.12);
+    color:var(--navy);
+    font-weight:850;
+    font-size:.78rem;
+}
+.start-guide-chip b{
+    color:var(--teal-dark);
+}
+.start-guide-steps{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:.65rem;
+    margin-top:.85rem;
+}
+.start-guide-step{
+    border-radius:14px;
+    background:rgba(255,255,255,.84);
+    border:1px solid rgba(18,50,93,.10);
+    padding:.70rem .75rem;
+}
+.start-guide-step-num{
+    width:24px;
+    height:24px;
+    border-radius:999px;
+    display:inline-grid;
+    place-items:center;
+    background:rgba(19,181,177,.12);
+    color:var(--teal-dark);
+    font-weight:950;
+    font-size:.72rem;
+    margin-bottom:.35rem;
+}
+.start-guide-step-title{
+    color:var(--navy);
+    font-size:.86rem;
+    font-weight:950;
+    margin-bottom:.14rem;
+}
+.start-guide-step-text{
+    color:var(--muted);
+    font-size:.74rem;
+    line-height:1.25;
+}
+.start-guide-callout{
+    margin-top:.75rem;
+    border-radius:13px;
+    padding:.55rem .70rem;
+    background:rgba(19,181,177,.09);
+    border:1px solid rgba(19,181,177,.22);
+    color:#075c64;
+    font-size:.80rem;
+    font-weight:850;
+}
+@media(max-width:1000px){
+    .start-guide-steps{grid-template-columns:1fr;}
+}
+
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -878,10 +991,13 @@ with pref_col:
 # ======================================================
 # APLICAR BÚSQUEDA SOLO AL OPRIMIR BOTÓN
 # ======================================================
-first_run = "applied_context" not in st.session_state
+if "has_searched" not in st.session_state:
+    st.session_state["has_searched"] = False
+
 shortlist_size = DEFAULT_SHORTLIST_SIZE
 
-if search_clicked or first_run:
+if search_clicked:
+    st.session_state["has_searched"] = True
     st.session_state["applied_team_name"] = team_name
     st.session_state["applied_merged_pos"] = merged_pos
     st.session_state["applied_shortlist_size"] = shortlist_size
@@ -890,6 +1006,57 @@ if search_clicked or first_run:
     st.session_state["applied_min_height"] = min_height
     st.session_state["applied_max_value_target"] = max_value_target
     st.session_state["selected_candidate_idx"] = None
+
+if not st.session_state.get("has_searched", False):
+    selected_club_txt = html.escape(str(team_name))
+    selected_pos_txt = html.escape(format_group_pos(merged_pos))
+    selected_pos_desc = html.escape(position_description(merged_pos))
+    pref_status = "activadas" if use_scouting_preferences else "desactivadas"
+
+    start_guide_html = (
+        f'<div class="start-guide">'
+        f'<div class="start-guide-main">'
+        f'<div class="start-guide-icon">◎</div>'
+        f'<div>'
+        f'<div class="start-guide-title">Empieza una búsqueda de compatibilidad táctica</div>'
+        f'<div class="start-guide-text">'
+        f'Selecciona el club objetivo, marca una posición en la cancha y ajusta las preferencias de scouting. '
+        f'Cuando oprimas <b>Buscar jugadores</b>, aparecerán el mejor candidato recomendado, las métricas y la shortlist.'
+        f'</div>'
+        f'<div class="start-guide-current">'
+        f'<div class="start-guide-chip">Club seleccionado: <b>{selected_club_txt}</b></div>'
+        f'<div class="start-guide-chip">Posición marcada: <b>{selected_pos_txt}</b> · {selected_pos_desc}</div>'
+        f'<div class="start-guide-chip">Preferencias: <b>{pref_status}</b></div>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+        f'<div class="start-guide-steps">'
+        f'<div class="start-guide-step">'
+        f'<div class="start-guide-step-num">1</div>'
+        f'<div class="start-guide-step-title">Elige el club</div>'
+        f'<div class="start-guide-step-text">Usa la tarjeta de configuración para definir el sistema del equipo objetivo.</div>'
+        f'</div>'
+        f'<div class="start-guide-step">'
+        f'<div class="start-guide-step-num">2</div>'
+        f'<div class="start-guide-step-title">Marca una posición</div>'
+        f'<div class="start-guide-step-text">Haz clic en la cancha para enfocar la búsqueda en el grupo posicional disponible.</div>'
+        f'</div>'
+        f'<div class="start-guide-step">'
+        f'<div class="start-guide-step-num">3</div>'
+        f'<div class="start-guide-step-title">Lanza el scouting</div>'
+        f'<div class="start-guide-step-text">Oprime Buscar jugadores para calcular compatibilidad, ranking y detalle táctico.</div>'
+        f'</div>'
+        f'</div>'
+        f'<div class="start-guide-callout">'
+        f'Tip: puedes cambiar posición, pie, altura o presupuesto antes de buscar. '
+        f'Los resultados solo se calculan cuando oprimes el botón.'
+        f'</div>'
+        f'</div>'
+    )
+
+    st.markdown(start_guide_html, unsafe_allow_html=True)
+    st.markdown("<div class='footer-note'>ScoutFit · Herramienta de apoyo para reclutamiento basada en compatibilidad sistema-jugador.</div>", unsafe_allow_html=True)
+    st.stop()
 
 applied_team_name = st.session_state.get("applied_team_name", team_name)
 applied_merged_pos = st.session_state.get("applied_merged_pos", merged_pos)
@@ -902,7 +1069,6 @@ applied_max_value_target = st.session_state.get("applied_max_value_target", max_
 pending_context = build_context_key(team_name, merged_pos, shortlist_size, exclude_same_team, preferred_foot, min_height, max_value_target)
 applied_context = build_context_key(applied_team_name, applied_merged_pos, applied_shortlist_size, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
 st.session_state["applied_context"] = applied_context
-
 
 # ======================================================
 # CÁLCULO CON CACHE DE SESIÓN

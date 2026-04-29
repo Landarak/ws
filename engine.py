@@ -127,6 +127,10 @@ DEFAULT_PENALTY_PROFILES = {
         "height_floor": 0.94,
         "value_alpha": 1.20,
         "value_floor": 0.35,
+        "age_scale": 8.0,
+        "age_power": 3.0,
+        "age_floor": 0.60,
+        "age_missing": 0.90,
     },
     "medium": {
         "foot_both": 0.98,
@@ -136,6 +140,10 @@ DEFAULT_PENALTY_PROFILES = {
         "height_floor": 0.88,
         "value_alpha": 2.00,
         "value_floor": 0.15,
+        "age_scale": 7.0,
+        "age_power": 3.0,
+        "age_floor": 0.50,
+        "age_missing": 0.88,
     },
     "strong": {
         "foot_both": 0.96,
@@ -145,6 +153,10 @@ DEFAULT_PENALTY_PROFILES = {
         "height_floor": 0.80,
         "value_alpha": 3.00,
         "value_floor": 0.03,
+        "age_scale": 6.0,
+        "age_power": 3.0,
+        "age_floor": 0.40,
+        "age_missing": 0.85,
     },
 }
 
@@ -399,7 +411,7 @@ class TacticalCompatibilityEngine:
         for c in numeric_cols:
             players[c] = pd.to_numeric(players[c], errors="coerce")
 
-        for c in ["height", "player_valuation", "total_minutes_pos", "n_matches_pos", "team_id", "player_id"]:
+        for c in ["height", "player_valuation", "age", "total_minutes_pos", "n_matches_pos", "team_id", "player_id"]:
             if c in players.columns:
                 players[c] = pd.to_numeric(players[c], errors="coerce")
 
@@ -435,7 +447,7 @@ class TacticalCompatibilityEngine:
             group_keys.append(pos_group_col)
 
         mean_cols = [c for c in CANDIDATE_FEATURE_COLS if c in df.columns]
-        mean_cols += [c for c in ["height", "player_valuation"] if c in df.columns]
+        mean_cols += [c for c in ["height", "player_valuation", "age"] if c in df.columns]
 
         sum_cols = [c for c in ["total_minutes_pos", "n_matches_pos"] if c in df.columns]
 
@@ -448,6 +460,8 @@ class TacticalCompatibilityEngine:
                 "event_team_name",
                 "base_pos",
                 "merged_pos",
+                "photo_path",
+                "photo_url",
             ]
             if c in df.columns and c not in group_keys and c not in mean_cols and c not in sum_cols
         ]
@@ -1373,12 +1387,42 @@ class TacticalCompatibilityEngine:
         pen = (vmax / v) ** profile["value_alpha"]
         return float(max(profile["value_floor"], min(1.0, pen)))
 
+    @staticmethod
+    def _age_range_penalty(player_age, min_age, max_age, profile):
+        """
+        Penalización suave por edad fuera del rango preferido.
+        Penaliza desde el primer año fuera del rango, pero cae de forma no lineal:
+        1 año casi no afecta, 3 años afecta moderadamente y 5-7 años afecta fuerte.
+        """
+        if min_age is None and max_age is None:
+            return 1.0
+        if pd.isna(player_age):
+            return float(profile.get("age_missing", profile.get("age_floor", 0.88)))
+
+        age = float(player_age)
+        gap = 0.0
+        if min_age is not None and pd.notna(min_age) and age < float(min_age):
+            gap = float(min_age) - age
+        elif max_age is not None and pd.notna(max_age) and age > float(max_age):
+            gap = age - float(max_age)
+
+        if gap <= 0:
+            return 1.0
+
+        scale = float(profile.get("age_scale", 7.0))
+        power = float(profile.get("age_power", 3.0))
+        floor = float(profile.get("age_floor", 0.50))
+        pen = 1.0 / (1.0 + (gap / scale) ** power)
+        return float(max(floor, min(1.0, pen)))
+
     def apply_penalties(
         self,
         result_df: pd.DataFrame,
         preferred_foot: Optional[str] = None,
         min_height: Optional[float] = None,
         max_value_target: Optional[float] = None,
+        min_age: Optional[float] = None,
+        max_age: Optional[float] = None,
         scenario_name: str = "medium",
         custom_profile: Optional[Dict[str, float]] = None,
         tactical_base_col: str = "compat_score_rank_0_100",
@@ -1401,10 +1445,13 @@ class TacticalCompatibilityEngine:
         foot_col = next((c for c in ["foot", "preferred_foot", "strong_foot", "player_foot"] if c in df.columns), None)
         height_col = next((c for c in ["height", "player_height"] if c in df.columns), None)
         value_col = next((c for c in ["player_valuation", "market_value", "market_value_eur", "player_market_value"] if c in df.columns), None)
+        age_col = next((c for c in ["age", "player_age", "edad"] if c in df.columns), None)
 
         df["preferred_foot_target"] = preferred_foot
         df["min_height_target"] = min_height
         df["max_value_target"] = max_value_target
+        df["min_age_target"] = min_age
+        df["max_age_target"] = max_age
 
         if foot_col is not None:
             df["penalty_foot"] = [self._foot_penalty(f, preferred_foot, profile) for f in df[foot_col]]
@@ -1421,7 +1468,12 @@ class TacticalCompatibilityEngine:
         else:
             df["penalty_value"] = 1.0
 
-        df["penalty_total"] = df["penalty_foot"] * df["penalty_height"] * df["penalty_value"]
+        if age_col is not None:
+            df["penalty_age"] = [self._age_range_penalty(a, min_age, max_age, profile) for a in df[age_col]]
+        else:
+            df["penalty_age"] = 1.0
+
+        df["penalty_total"] = df["penalty_foot"] * df["penalty_height"] * df["penalty_value"] * df["penalty_age"]
         df["final_scouting_score_0_100"] = df[tactical_base_col] * df["penalty_total"]
         df["score_delta"] = df[tactical_base_col] - df["final_scouting_score_0_100"]
 

@@ -79,9 +79,9 @@ div[data-testid="stHorizontalBlock"]{
 .st-key-config_panel[data-testid="stVerticalBlockBorderWrapper"],
 .st-key-pitch_panel[data-testid="stVerticalBlockBorderWrapper"],
 .st-key-pref_panel[data-testid="stVerticalBlockBorderWrapper"]{
-    height:262px!important;
-    min-height:262px!important;
-    max-height:262px!important;
+    height:330px!important;
+    min-height:330px!important;
+    max-height:330px!important;
     overflow:hidden!important;
     border-radius:14px!important;
 }
@@ -220,9 +220,9 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
 .st-key-config_panel[data-testid="stVerticalBlockBorderWrapper"],
 .st-key-pitch_panel[data-testid="stVerticalBlockBorderWrapper"],
 .st-key-pref_panel[data-testid="stVerticalBlockBorderWrapper"]{
-    height:262px!important;
-    min-height:262px!important;
-    max-height:262px!important;
+    height:330px!important;
+    min-height:330px!important;
+    max-height:330px!important;
     overflow:hidden!important;
 }
 
@@ -294,7 +294,7 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
 .shortlist-card{
     position:relative;
     display:grid;
-    grid-template-columns:42px minmax(220px,1.55fr) 95px 120px 105px 95px minmax(210px,.95fr);
+    grid-template-columns:42px 46px minmax(190px,1.45fr) 78px 82px 112px 96px 88px minmax(210px,.95fr);
     align-items:center;
     gap:.72rem;
     width:100%;
@@ -330,6 +330,46 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
     color:var(--teal-dark);
     font-size:.82rem;
     font-weight:950;
+}
+
+.shortlist-avatar,
+.candidate-photo,
+.detail-avatar-img{
+    border-radius:999px;
+    object-fit:cover;
+    object-position:center;
+    display:block;
+    overflow:hidden;
+    background:linear-gradient(135deg,var(--navy-2),var(--navy));
+    border:1px solid rgba(201,161,67,.44);
+    box-shadow:0 7px 15px rgba(6,43,79,.14);
+}
+
+.shortlist-avatar{
+    width:38px;
+    height:38px;
+    color:#fff;
+    display:grid;
+    place-items:center;
+    font-size:.78rem;
+    font-weight:950;
+}
+
+.candidate-photo{
+    width:44px!important;
+    height:44px!important;
+    min-width:44px!important;
+    color:#fff;
+    display:grid;
+    place-items:center;
+    font-size:.95rem;
+    font-weight:950;
+}
+
+.detail-avatar-img{
+    width:58px;
+    height:58px;
+    min-width:58px;
 }
 
 .shortlist-player-name{
@@ -447,7 +487,7 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
 
 @media(max-width:1200px){
     .shortlist-card{
-        grid-template-columns:34px minmax(170px,1.45fr) 72px 92px 86px 76px minmax(150px,.9fr);
+        grid-template-columns:30px 34px minmax(150px,1.35fr) 58px 64px 82px 76px 70px minmax(130px,.9fr);
         gap:.45rem;
         padding:.55rem .58rem;
     }
@@ -1553,6 +1593,73 @@ def format_height(value: Any) -> str:
         return "No disponible"
     return f"{numeric_value:.2f} m"
 
+def format_age(value: Any) -> str:
+    numeric_value = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(numeric_value):
+        return "No disponible"
+    return f"{int(round(float(numeric_value)))} años"
+
+def _local_image_to_data_uri(path_value: Any) -> str:
+    if pd.isna(path_value):
+        return ""
+    raw = str(path_value).strip()
+    if not raw or raw.lower() in {"nan", "none", "null"}:
+        return ""
+
+    raw_path = Path(raw)
+    candidates = [raw_path]
+    if not raw_path.is_absolute():
+        candidates.extend([
+            Path.cwd() / raw,
+            Path(__file__).resolve().parent / raw,
+        ])
+
+    for candidate in candidates:
+        try:
+            if candidate.exists() and candidate.is_file():
+                suffix = candidate.suffix.lower()
+                mime = "image/png"
+                if suffix in {".jpg", ".jpeg"}:
+                    mime = "image/jpeg"
+                elif suffix == ".webp":
+                    mime = "image/webp"
+                encoded = base64.b64encode(candidate.read_bytes()).decode("utf-8")
+                return f"data:{mime};base64,{encoded}"
+        except Exception:
+            continue
+    return ""
+
+def player_photo_src(row: pd.Series | dict[str, Any] | None) -> str:
+    if row is None:
+        return ""
+
+    for col in ["photo_path", "Foto", "player_photo_path"]:
+        try:
+            value = row.get(col, pd.NA)
+        except AttributeError:
+            value = pd.NA
+        src = _local_image_to_data_uri(value)
+        if src:
+            return src
+
+    for col in ["photo_url", "Foto URL", "image_url"]:
+        try:
+            value = row.get(col, pd.NA)
+        except AttributeError:
+            value = pd.NA
+        if pd.notna(value):
+            raw = str(value).strip()
+            if raw.lower().startswith(("http://", "https://")):
+                return raw
+    return ""
+
+def avatar_html(player_name: str, row: pd.Series | dict[str, Any] | None = None, class_name: str = "avatar-placeholder") -> str:
+    src = player_photo_src(row)
+    alt = html.escape(str(player_name), quote=True)
+    if src:
+        return f'<img src="{html.escape(src, quote=True)}" class="{html.escape(class_name)}" alt="{alt}">'
+    return f'<div class="{html.escape(class_name)}">{html.escape(player_initials(player_name))}</div>'
+
 def safe_score(value: Any) -> float | None:
     score = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
     if pd.isna(score):
@@ -1575,12 +1682,40 @@ def final_ranking_display(df: pd.DataFrame) -> pd.DataFrame:
     player_col = name_col_for(df)
     if player_col is None:
         return pd.DataFrame()
-    required = [player_col,"event_team_name","merged_pos","player_valuation","foot","height","final_scouting_score_0_100"]
+
+    required = [
+        player_col,
+        "event_team_name",
+        "merged_pos",
+        "age",
+        "player_valuation",
+        "foot",
+        "height",
+        "photo_path",
+        "photo_url",
+        "final_scouting_score_0_100",
+    ]
     available = [col for col in required if col in df.columns]
     out = df[available].copy()
-    out = out.rename(columns={player_col:"Jugador","event_team_name":"Club","merged_pos":"Grupo posicional","player_valuation":"Valor de mercado","foot":"Pie","height":"Altura","final_scouting_score_0_100":"Score final"})
+    out = out.rename(
+        columns={
+            player_col: "Jugador",
+            "event_team_name": "Club",
+            "merged_pos": "Grupo posicional",
+            "age": "Edad",
+            "player_valuation": "Valor de mercado",
+            "foot": "Pie",
+            "height": "Altura",
+            "photo_path": "Foto",
+            "photo_url": "Foto URL",
+            "final_scouting_score_0_100": "Score final",
+        }
+    )
+
     if "Grupo posicional" in out.columns:
         out["Grupo posicional"] = out["Grupo posicional"].map(format_group_pos)
+    if "Edad" in out.columns:
+        out["Edad"] = out["Edad"].map(format_age)
     if "Pie" in out.columns:
         out["Pie"] = out["Pie"].map(format_foot)
     if "Altura" in out.columns:
@@ -1589,7 +1724,19 @@ def final_ranking_display(df: pd.DataFrame) -> pd.DataFrame:
         out["Valor de mercado"] = out["Valor de mercado"].map(money_short)
     if "Score final" in out.columns:
         out["Score final"] = pd.to_numeric(out["Score final"], errors="coerce").round(1)
-    final_order = ["Jugador","Club","Grupo posicional","Valor de mercado","Pie","Altura","Score final"]
+
+    final_order = [
+        "Jugador",
+        "Club",
+        "Foto",
+        "Foto URL",
+        "Grupo posicional",
+        "Edad",
+        "Valor de mercado",
+        "Pie",
+        "Altura",
+        "Score final",
+    ]
     return out[[col for col in final_order if col in out.columns]]
 
 def build_context_key(*items: Any) -> str:
@@ -1662,6 +1809,8 @@ def build_preference_rows(selected_row: pd.Series) -> tuple[list[dict[str, str]]
     preferred_foot = st.session_state.get("applied_preferred_foot")
     min_height = st.session_state.get("applied_min_height")
     max_value_target = st.session_state.get("applied_max_value_target")
+    min_age = st.session_state.get("applied_min_age")
+    max_age = st.session_state.get("applied_max_age")
 
     selected_score = safe_score(selected_row.get("final_scouting_score_0_100"))
     base_score = safe_score(selected_row.get(SCORE_METHOD))
@@ -1701,6 +1850,34 @@ def build_preference_rows(selected_row: pd.Series) -> tuple[list[dict[str, str]]
             "actual": money_short(actual_value),
             "status": "Dentro del presupuesto" if value_ok else "Supera el presupuesto",
             "status_key": "ok" if value_ok else "bad",
+        })
+
+    actual_age = pd.to_numeric(pd.Series([selected_row.get("age", pd.NA)]), errors="coerce").iloc[0]
+    if min_age is not None and max_age is not None:
+        age_ok = pd.notna(actual_age) and float(min_age) <= float(actual_age) <= float(max_age)
+        gap = 0.0
+        if pd.notna(actual_age):
+            if float(actual_age) < float(min_age):
+                gap = float(min_age) - float(actual_age)
+            elif float(actual_age) > float(max_age):
+                gap = float(actual_age) - float(max_age)
+
+        if age_ok:
+            age_status = "Cumple"
+            status_key = "ok"
+        elif gap >= 5:
+            age_status = "Penalización fuerte"
+            status_key = "bad"
+        else:
+            age_status = "Penalización leve"
+            status_key = "neutral"
+
+        rows.append({
+            "criterion": "Rango de edad",
+            "target": f"{int(min_age)}-{int(max_age)} años",
+            "actual": format_age(actual_age),
+            "status": age_status,
+            "status_key": status_key,
         })
 
     if not rows:
@@ -1987,9 +2164,11 @@ def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
         player = html.escape(str(row.get("Jugador", "Jugador no disponible")))
         club = html.escape(str(row.get("Club", "Club no disponible")))
         group = html.escape(str(row.get("Grupo posicional", "")))
+        age = html.escape(str(row.get("Edad", "")))
         value = html.escape(str(row.get("Valor de mercado", "")))
         foot = html.escape(str(row.get("Pie", "")))
         height = html.escape(str(row.get("Altura", "")))
+        avatar = avatar_html(str(row.get("Jugador", "Jugador no disponible")), row, "shortlist-avatar")
 
         score_value = pd.to_numeric(pd.Series([row.get("Score final", None)]), errors="coerce").iloc[0]
         score_text = "NA" if pd.isna(score_value) else f"{float(score_value):.1f}"
@@ -2000,9 +2179,14 @@ def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
         card_html = (
             f'<div class="shortlist-card{selected_class}">'
             f'<div class="shortlist-rank">{idx + 1}</div>'
+            f'{avatar}'
             f'<div class="shortlist-player">'
             f'<div class="shortlist-player-name">{player}</div>'
             f'<div class="shortlist-player-sub">{club}</div>'
+            f'</div>'
+            f'<div class="shortlist-field">'
+            f'<div class="shortlist-label">Edad</div>'
+            f'<div class="shortlist-value">{age}</div>'
             f'</div>'
             f'<div class="shortlist-field">'
             f'<div class="shortlist-label">Grupo</div>'
@@ -2043,7 +2227,7 @@ def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
 
     return clicked_rows
 
-def compute_ranking(proto_df, players_df, team_name, formation_final, ui_slot, exclude_same_team, preferred_foot, min_height, max_value_target):
+def compute_ranking(proto_df, players_df, team_name, formation_final, ui_slot, exclude_same_team, preferred_foot, min_height, max_value_target, min_age, max_age):
     raw_df, proto_row, valid_cols = engine.compute_for_target_slot(
         proto_df=proto_df,
         players_df=players_df,
@@ -2071,6 +2255,8 @@ def compute_ranking(proto_df, players_df, team_name, formation_final, ui_slot, e
         preferred_foot=preferred_foot,
         min_height=min_height,
         max_value_target=max_value_target,
+        min_age=min_age,
+        max_age=max_age,
         scenario_name=PENALTY_PROFILE,
         tactical_base_col=SCORE_METHOD,
     )
@@ -2102,7 +2288,7 @@ def render_player_detail_content(selected_player: str, selected_row: pd.Series, 
     <div class="detail-hero">
         <div class="detail-hero-top">
             <div class="detail-identity">
-                <div class="detail-avatar">{html.escape(player_initials(selected_player))}</div>
+                {avatar_html(selected_player, selected_row, "detail-avatar detail-avatar-img")}
                 <div>
                     <div class="detail-name">{html.escape(selected_player)}</div>
                     <div class="detail-sub">{html.escape(str(selected_row.get('event_team_name', 'Club no disponible')))} · {html.escape(group_text)}</div>
@@ -2119,7 +2305,7 @@ def render_player_detail_content(selected_player: str, selected_row: pd.Series, 
     """
     st.markdown(hero_html, unsafe_allow_html=True)
 
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2, k3, k4, k5 = st.columns(5)
     with k1:
         st.markdown(detail_metric_card("Score táctico", selected_base_score_text, "Ajuste puro contra el prototipo"), unsafe_allow_html=True)
     with k2:
@@ -2128,6 +2314,8 @@ def render_player_detail_content(selected_player: str, selected_row: pd.Series, 
         st.markdown(detail_metric_card("Valor de mercado", money_short(selected_row.get("player_valuation", pd.NA)), "Referencia económica del candidato"), unsafe_allow_html=True)
     with k4:
         st.markdown(detail_metric_card("Altura", format_height(selected_row.get("height", pd.NA)), "Dato físico disponible en la base"), unsafe_allow_html=True)
+    with k5:
+        st.markdown(detail_metric_card("Edad", format_age(selected_row.get("age", pd.NA)), "Edad del candidato"), unsafe_allow_html=True)
 
     tab1, tab2, tab3 = st.tabs(["Resumen", "Bloques tácticos", "Detalle completo"])
 
@@ -2170,7 +2358,7 @@ def render_player_detail_content(selected_player: str, selected_row: pd.Series, 
                 <div class="preference-card">
                     <div class="detail-section-title">Impacto de preferencias</div>
                     <div class="preference-impact-number">{html.escape(impact_number)}</div>
-                    <div class="preference-impact-caption">Variación del score táctico al aplicar pie, altura y presupuesto.</div>
+                    <div class="preference-impact-caption">Variación del score táctico al aplicar pie, altura, presupuesto y edad.</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -2362,14 +2550,40 @@ with pref_col:
             preferred_foot = None if foot_choice == "none" else foot_choice
             pref_c1, pref_c2 = st.columns([1, 1], gap="small")
             with pref_c1:
-                min_height = st.number_input("Altura mínima", min_value=1.50, max_value=2.20, value=float(auto_min_height) if auto_min_height is not None else 1.75, step=0.01, key=f"min_height_{pref_key_suffix}")
+                min_height = st.number_input(
+                    "Altura mínima",
+                    min_value=1.50,
+                    max_value=2.20,
+                    value=float(auto_min_height) if auto_min_height is not None else 1.75,
+                    step=0.01,
+                    key=f"min_height_{pref_key_suffix}",
+                )
             with pref_c2:
                 default_budget = float(max_value_target_team) if pd.notna(max_value_target_team) else 10_000_000.0
-                max_value_target = st.number_input("Presupuesto máximo", min_value=0.0, value=default_budget, step=500_000.0, key=f"max_value_{pref_key_suffix}")
+                default_budget_m = round(default_budget / 1_000_000, 1)
+                max_value_target_m = st.number_input(
+                    "Presupuesto máx. (€M)",
+                    min_value=0.0,
+                    value=float(default_budget_m),
+                    step=0.5,
+                    key=f"max_value_m_{pref_key_suffix}",
+                )
+                max_value_target = float(max_value_target_m) * 1_000_000
+
+            min_age, max_age = st.slider(
+                "Rango de edad",
+                min_value=15,
+                max_value=45,
+                value=(18, 30),
+                step=1,
+                key=f"age_range_{pref_key_suffix}",
+            )
         else:
             preferred_foot = None
             min_height = None
             max_value_target = None
+            min_age = None
+            max_age = None
 
 # ======================================================
 # APLICAR BÚSQUEDA SOLO AL OPRIMIR BOTÓN
@@ -2389,6 +2603,8 @@ if search_clicked:
     st.session_state["applied_preferred_foot"] = preferred_foot
     st.session_state["applied_min_height"] = min_height
     st.session_state["applied_max_value_target"] = max_value_target
+    st.session_state["applied_min_age"] = min_age
+    st.session_state["applied_max_age"] = max_age
     st.session_state["selected_candidate_idx"] = None
 
 if not st.session_state.get("has_searched", False):
@@ -2434,7 +2650,7 @@ if not st.session_state.get("has_searched", False):
         f'</div>'
         f'</div>'
         f'<div class="start-guide-callout">'
-        f'Tip: puedes cambiar posición, pie, altura o presupuesto antes de buscar. '
+        f'Tip: puedes cambiar posición, pie, altura, edad o presupuesto antes de buscar. '
         f'Los resultados solo se calculan cuando oprimes el botón.'
         f'</div>'
         f'</div>'
@@ -2452,19 +2668,21 @@ applied_exclude_same_team = bool(st.session_state.get("applied_exclude_same_team
 applied_preferred_foot = st.session_state.get("applied_preferred_foot", preferred_foot)
 applied_min_height = st.session_state.get("applied_min_height", min_height)
 applied_max_value_target = st.session_state.get("applied_max_value_target", max_value_target)
+applied_min_age = st.session_state.get("applied_min_age", min_age)
+applied_max_age = st.session_state.get("applied_max_age", max_age)
 
-pending_context = build_context_key(team_name, formation_final, selected_slot, shortlist_size, exclude_same_team, preferred_foot, min_height, max_value_target)
-applied_context = build_context_key(applied_team_name, applied_formation, applied_slot, applied_shortlist_size, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
+pending_context = build_context_key(team_name, formation_final, selected_slot, shortlist_size, exclude_same_team, preferred_foot, min_height, max_value_target, min_age, max_age)
+applied_context = build_context_key(applied_team_name, applied_formation, applied_slot, applied_shortlist_size, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target, applied_min_age, applied_max_age)
 st.session_state["applied_context"] = applied_context
 
 
 # ======================================================
 # CÁLCULO CON CACHE DE SESIÓN
 # ======================================================
-ranking_context = build_context_key(applied_team_name, applied_formation, applied_slot, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
+ranking_context = build_context_key(applied_team_name, applied_formation, applied_slot, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target, applied_min_age, applied_max_age)
 if st.session_state.get("ranking_context") != ranking_context:
     with st.spinner("Buscando candidatos compatibles..."):
-        raw_df, final_df, proto_row, valid_cols = compute_ranking(proto_df, players_df, applied_team_name, applied_formation, applied_slot, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
+        raw_df, final_df, proto_row, valid_cols = compute_ranking(proto_df, players_df, applied_team_name, applied_formation, applied_slot, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target, applied_min_age, applied_max_age)
     st.session_state["ranking_context"] = ranking_context
     st.session_state["ranking_raw_df"] = raw_df
     st.session_state["ranking_final_df"] = final_df
@@ -2490,10 +2708,11 @@ top_score = safe_score(top.get("final_scouting_score_0_100"))
 top_score_text = f"{top_score:.0f}%" if top_score is not None else "NA"
 top_distance_score = safe_score(top.get(SCORE_METHOD))
 
-rec_col, score_col, club_col, foot_col, value_col, height_col = st.columns([2.45, 1.35, 1.10, .92, 1.10, .92], gap="small")
+rec_col, score_col, club_col, age_col, foot_col, value_col, height_col = st.columns([2.25, 1.20, 1.00, .78, .82, 1.02, .82], gap="small")
 with rec_col:
+    top_avatar = avatar_html(top_player, top, "candidate-photo")
     st.markdown(f"""
-    <div class="candidate-card"><div class="candidate-card-flex"><div class="avatar-placeholder">{html.escape(player_initials(top_player))}</div><div>
+    <div class="candidate-card"><div class="candidate-card-flex">{top_avatar}<div>
     <div class="mini-label">Mejor candidato recomendado</div><div class="candidate-name">{html.escape(top_player)}</div>
     <div class="candidate-meta">{html.escape(str(top.get('event_team_name', 'Club no disponible')))}</div>
     <div class="position-pill">{html.escape(format_group_pos(top.get('merged_pos', applied_slot)))}</div></div></div></div>
@@ -2502,6 +2721,8 @@ with score_col:
     st.markdown(f"<div class='score-card'><div class='score-label'>Score final de compatibilidad</div><div class='big-score'>{html.escape(top_score_text)}</div><div class='score-status'>{html.escape(score_status(top_score))}</div></div>", unsafe_allow_html=True)
 with club_col:
     st.markdown(f"<div class='stat-card'><div class='stat-label'>Club actual</div><div class='stat-value'>{html.escape(str(top.get('event_team_name', 'NA')))}</div></div>", unsafe_allow_html=True)
+with age_col:
+    st.markdown(f"<div class='stat-card'><div class='stat-label'>Edad</div><div class='stat-value accent'>{html.escape(format_age(top.get('age', pd.NA)))}</div></div>", unsafe_allow_html=True)
 with foot_col:
     st.markdown(f"<div class='stat-card'><div class='stat-label'>Pie</div><div class='stat-value'>{html.escape(format_foot(top.get('foot', pd.NA)))}</div></div>", unsafe_allow_html=True)
 with value_col:
@@ -2524,7 +2745,7 @@ with section_left:
     
     </div></div></div>
     """, unsafe_allow_html=True)
-
+    
 
 selection_context = build_context_key(ranking_context, applied_shortlist_size)
 if st.session_state.get("selection_context") != selection_context:

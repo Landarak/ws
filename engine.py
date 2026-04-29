@@ -49,10 +49,20 @@ MERGED_PROTOTYPE_WEIGHTED_PATH = BASE / (
     "clustering_roles_merged_v4/team_position_prototypes_merged_v4/merged_team_position_prototype_weighted_v4.csv"
 )
 
+# Prototipo recomendado para la app:
+# conserva formación + slot táctico específico, por ejemplo DC_1/DC_2,
+# pero mantiene los grupos fusionados LAW/RAW/LWM/RWM.
+MERGED_SLOT_PROTOTYPE_APP_READY_PATH = resource_path("merged_team_formation_slot_prototype_app_ready_v4.csv")
+
+# Fallback útil cuando el CSV está junto a app.py/engine.py durante pruebas locales.
+MERGED_SLOT_PROTOTYPE_APP_READY_FALLBACK_PATH = resource_path(
+    "merged_team_formation_slot_prototype_app_ready_v4.csv"
+)
+
 # =========================
 # MATRIZ DE JUGADORES
 # =========================
-PLAYER_MATRIX_FULL_PATH = resource_path("matrizjugadorescompleta.parquet")
+PLAYER_MATRIX_FULL_PATH = Path("matrizjugadorescompleta.parquet")
 
 CANDIDATE_FEATURE_COLS = [
     "n_events_p90", "touches_p90", "passes_p90", "def_actions_p90",
@@ -182,7 +192,23 @@ TACTICAL_BLOCKS = {
 
 
 def load_any_table(path) -> pd.DataFrame:
-    path = Path(path)
+    """
+    Carga CSV o Parquet. Acepta una ruta única o una lista/tupla de rutas
+    para permitir fallbacks entre la estructura Todo/ y archivos junto a la app.
+    """
+    if isinstance(path, (list, tuple)):
+        attempted = []
+        for candidate in path:
+            candidate_path = Path(candidate)
+            attempted.append(str(candidate_path))
+            if candidate_path.exists():
+                path = candidate_path
+                break
+        else:
+            raise FileNotFoundError("No existe ninguna de estas rutas: " + " | ".join(attempted))
+    else:
+        path = Path(path)
+
     if not path.exists():
         raise FileNotFoundError(f"No existe: {path}")
     if path.suffix.lower() == ".parquet":
@@ -200,6 +226,10 @@ class TacticalCompatibilityEngine:
         self.merged_prototype_sources = {
             "primary_formation": MERGED_PROTOTYPE_PRIMARY_PATH,
             "weighted": MERGED_PROTOTYPE_WEIGHTED_PATH,
+            "slot_app_ready": (
+                MERGED_SLOT_PROTOTYPE_APP_READY_PATH,
+                MERGED_SLOT_PROTOTYPE_APP_READY_FALLBACK_PATH,
+            ),
         }
 
         self.player_path = PLAYER_MATRIX_FULL_PATH
@@ -307,13 +337,59 @@ class TacticalCompatibilityEngine:
     def _prepare_proto(self, df: pd.DataFrame) -> pd.DataFrame:
         proto = self.add_merged_pos(df.copy())
 
+        # El archivo app-ready ya trae ui_slot y ui_slot_label.
+        # Para que el motor sea robusto, los creamos si no existen.
+        if "ui_slot" not in proto.columns:
+            if "slot_id" in proto.columns:
+                proto["ui_slot"] = proto["slot_id"].astype(str)
+            elif "merged_pos_abbr" in proto.columns:
+                proto["ui_slot"] = proto["merged_pos_abbr"].astype(str)
+            elif "merged_pos" in proto.columns:
+                proto["ui_slot"] = proto["merged_pos"].astype(str)
+            elif "base_pos" in proto.columns:
+                proto["ui_slot"] = proto["base_pos"].astype(str)
+
+        if "merged_pos_abbr" not in proto.columns and "merged_pos" in proto.columns:
+            proto["merged_pos_abbr"] = (
+                proto["merged_pos"].astype(str)
+                .replace({
+                    "LEFT_ATTACK_WIDE": "LAW",
+                    "RIGHT_ATTACK_WIDE": "RAW",
+                    "LEFT_WIDE_MID": "LWM",
+                    "RIGHT_WIDE_MID": "RWM",
+                })
+            )
+
+        if "ui_slot_label" not in proto.columns and "ui_slot" in proto.columns:
+            if "dominant_cluster" in proto.columns:
+                proto["ui_slot_label"] = proto["ui_slot"].astype(str) + " — " + proto["dominant_cluster"].astype(str)
+            else:
+                proto["ui_slot_label"] = proto["ui_slot"].astype(str)
+
         numeric_cols = [c for c in CANDIDATE_FEATURE_COLS if c in proto.columns]
         for c in numeric_cols:
             proto[c] = pd.to_numeric(proto[c], errors="coerce")
 
-        for c in ["team_id", "n_obs_dominant", "dominant_cluster_share"]:
+        for c in [
+            "team_id",
+            "n_obs_dominant",
+            "dominant_cluster_share",
+            "mean_cluster_conf",
+            "dominant_cluster_conf_mean",
+            "mean_minutes_played",
+            "n_matches",
+            "total_weight",
+            "n_formations",
+            "n_slots",
+            "n_base_pos",
+            "cluster_support",
+        ]:
             if c in proto.columns:
                 proto[c] = pd.to_numeric(proto[c], errors="coerce")
+
+        for c in ["event_team_name", "formation_final", "slot_id", "base_pos", "merged_pos", "ui_slot", "ui_slot_label"]:
+            if c in proto.columns:
+                proto[c] = proto[c].astype(str).str.strip()
 
         return proto
 
@@ -481,6 +557,104 @@ class TacticalCompatibilityEngine:
 
         return []
 
+    @staticmethod
+    def _slot_sort_key(value: str) -> Tuple[int, int, str]:
+        """
+        Orden táctico aproximado para pintar la cancha y mostrar selectores.
+        """
+        raw = str(value).strip()
+        base = raw.split("_")[0]
+        suffix = 0
+        if "_" in raw:
+            tail = raw.rsplit("_", 1)[-1]
+            if tail.isdigit():
+                suffix = int(tail)
+
+        order = {
+            "GK": 0,
+            "DL": 10, "DC": 11, "DR": 12,
+            "DML": 20, "DMC": 21, "DMR": 22,
+            "LWM": 29, "ML": 30, "MC": 31, "MR": 32, "RWM": 33,
+            "AMC": 40,
+            "LAW": 50, "AML": 51, "FWL": 52,
+            "FW": 53,
+            "RAW": 54, "AMR": 55, "FWR": 56,
+        }
+        return (order.get(base, 999), suffix, raw)
+
+    def get_formation_options(self, proto_df: pd.DataFrame, team_name: Optional[str] = None) -> List[str]:
+        df = proto_df.copy()
+
+        if team_name and "event_team_name" in df.columns:
+            df = df[df["event_team_name"].astype(str) == str(team_name)].copy()
+
+        if "formation_final" not in df.columns:
+            return []
+
+        vals = self._safe_string_series(df, "formation_final").unique().tolist()
+
+        # Si existe n_matches, priorizamos formaciones con más soporte observado.
+        if vals and "n_matches" in df.columns:
+            support = (
+                df.groupby("formation_final", dropna=False)["n_matches"]
+                .sum()
+                .sort_values(ascending=False)
+            )
+            ordered = [str(x) for x in support.index.tolist() if str(x) in set(map(str, vals))]
+            return ordered
+
+        return sorted([str(v) for v in vals])
+
+    def get_slot_options(
+        self,
+        proto_df: pd.DataFrame,
+        team_name: Optional[str] = None,
+        formation_final: Optional[str] = None,
+    ) -> List[str]:
+        df = proto_df.copy()
+
+        if team_name and "event_team_name" in df.columns:
+            df = df[df["event_team_name"].astype(str) == str(team_name)].copy()
+
+        if formation_final and "formation_final" in df.columns:
+            df = df[df["formation_final"].astype(str) == str(formation_final)].copy()
+
+        slot_col = "ui_slot" if "ui_slot" in df.columns else ("slot_id" if "slot_id" in df.columns else None)
+        if slot_col is None:
+            return self.get_merged_position_options(df, team_name=None)
+
+        vals = self._safe_string_series(df, slot_col).unique().tolist()
+        return sorted([str(v) for v in vals], key=self._slot_sort_key)
+
+    def get_slot_row(
+        self,
+        proto_df: pd.DataFrame,
+        team_name: str,
+        formation_final: str,
+        ui_slot: str,
+    ) -> Optional[pd.Series]:
+        df = proto_df.copy()
+
+        if "event_team_name" in df.columns:
+            df = df[df["event_team_name"].astype(str) == str(team_name)].copy()
+        if "formation_final" in df.columns:
+            df = df[df["formation_final"].astype(str) == str(formation_final)].copy()
+
+        slot_col = "ui_slot" if "ui_slot" in df.columns else ("slot_id" if "slot_id" in df.columns else None)
+        if slot_col is None:
+            return None
+
+        df = df[df[slot_col].astype(str) == str(ui_slot)].copy()
+        if df.empty:
+            return None
+
+        # Si por alguna razón hay más de una fila, usamos la de mayor soporte.
+        support_cols = [c for c in ["n_obs_dominant", "n_matches", "mean_minutes_played"] if c in df.columns]
+        if support_cols:
+            df = df.sort_values(support_cols, ascending=[False] * len(support_cols))
+
+        return df.iloc[0].copy()
+
     def shared_feature_cols(self, proto_df: pd.DataFrame, players_df: pd.DataFrame, feature_set: str = "full") -> List[str]:
         return self.get_feature_cols(proto_df, players_df, feature_set=feature_set)
 
@@ -491,8 +665,8 @@ class TacticalCompatibilityEngine:
         pos = str(base_pos).upper() if base_pos is not None else ""
         slot = str(slot_or_pos).upper() if slot_or_pos is not None else ""
 
-        left_like = {"DL", "DML", "ML", "AML", "FWL", "LEFT_WIDE_MID", "LEFT_ATTACK_WIDE"}
-        right_like = {"DR", "DMR", "MR", "AMR", "FWR", "RIGHT_WIDE_MID", "RIGHT_ATTACK_WIDE"}
+        left_like = {"DL", "DML", "ML", "AML", "FWL", "LEFT_WIDE_MID", "LEFT_ATTACK_WIDE", "LAW", "LWM"}
+        right_like = {"DR", "DMR", "MR", "AMR", "FWR", "RIGHT_WIDE_MID", "RIGHT_ATTACK_WIDE", "RAW", "RWM"}
 
         if pos in left_like or slot in left_like:
             return "left"
@@ -759,6 +933,210 @@ class TacticalCompatibilityEngine:
         res["rank"] = np.arange(1, len(res) + 1)
 
         return res, proto_row, valid_cols
+
+    # ======================================================
+    # SCORE TÁCTICO PURO - SLOT APP READY
+    # ======================================================
+    def compute_for_target_slot(
+        self,
+        proto_df: pd.DataFrame,
+        players_df: pd.DataFrame,
+        team_name: str,
+        formation_final: str,
+        ui_slot: str,
+        allowed_leagues: Optional[List[str]] = None,
+        exclude_same_team: bool = True,
+        score_method: str = "compat_score_rank_0_100",
+        feature_set: str = "full",
+        metric: str = "euclidean",
+    ) -> Tuple[pd.DataFrame, Optional[pd.Series], List[str]]:
+        """
+        Calcula compatibilidad contra un prototipo específico:
+        equipo + formación + slot táctico.
+
+        Ejemplo:
+        Arsenal + 4-3-3 + DC_1.
+
+        Los candidatos se filtran por el grupo posicional merged del prototipo.
+        Así, DC_1 y DC_2 usan candidatos DC, pero cada uno contra su propio perfil.
+        """
+        feature_set = self.normalize_feature_set(feature_set)
+        metric = self.normalize_metric(metric)
+
+        proto = self.add_merged_pos(proto_df.copy())
+        players = self.add_merged_pos(players_df.copy())
+
+        if allowed_leagues and "league_key" in players.columns:
+            players = players[players["league_key"].isin(allowed_leagues)].copy()
+
+        proto_row = self.get_slot_row(
+            proto_df=proto,
+            team_name=team_name,
+            formation_final=formation_final,
+            ui_slot=ui_slot,
+        )
+        if proto_row is None:
+            return pd.DataFrame(), None, []
+
+        # Dejamos proto como DataFrame de una fila para reutilizar el flujo.
+        proto = pd.DataFrame([proto_row]).copy()
+
+        candidate_merged_pos = proto_row.get("merged_pos", np.nan)
+        candidate_base_pos = proto_row.get("base_pos", np.nan)
+
+        if pd.notna(candidate_merged_pos) and "merged_pos" in players.columns:
+            players = players[players["merged_pos"].astype(str) == str(candidate_merged_pos)].copy()
+        elif pd.notna(candidate_base_pos) and "base_pos" in players.columns:
+            players = players[players["base_pos"].astype(str) == str(candidate_base_pos)].copy()
+        else:
+            return pd.DataFrame(), proto_row, []
+
+        if players.empty:
+            return pd.DataFrame(), proto_row, []
+
+        if exclude_same_team and "team_id" in players.columns and "team_id" in proto.columns:
+            target_team_id = proto["team_id"].iloc[0]
+            players = players[players["team_id"] != target_team_id].copy()
+
+        if players.empty:
+            return pd.DataFrame(), proto_row, []
+
+        # Agrupamos por jugador dentro del grupo posicional candidato para evitar duplicados.
+        group_col = "merged_pos" if "merged_pos" in players.columns else "base_pos"
+        players = self._aggregate_players_by_name(players, pos_group_col=group_col)
+        if players.empty:
+            return pd.DataFrame(), proto_row, []
+
+        shared_cols = self.shared_feature_cols(proto, players, feature_set=feature_set)
+        if len(shared_cols) == 0:
+            return pd.DataFrame(), proto_row, []
+
+        min_required = max(10, int(0.05 * len(players)))
+        valid_cols = [c for c in shared_cols if players[c].notna().sum() >= min_required]
+        if len(valid_cols) < 5:
+            return pd.DataFrame(), proto_row, valid_cols
+
+        X_players = players[valid_cols].copy()
+        X_players = X_players.fillna(X_players.median(numeric_only=True)).fillna(0.0)
+
+        X_proto = proto[valid_cols].copy()
+        X_proto = X_proto.fillna(X_players.median(numeric_only=True)).fillna(0.0)
+
+        scaler = StandardScaler()
+        X_players_z = scaler.fit_transform(X_players)
+        X_proto_z = scaler.transform(X_proto)
+
+        proto_vec = X_proto_z[0]
+        dist = self._compute_distance(X_players_z, proto_vec, metric=metric)
+
+        res = players.copy()
+        res["prototype_team_name"] = proto_row.get("event_team_name", np.nan)
+        res["prototype_formation"] = proto_row.get("formation_final", np.nan)
+        res["prototype_slot_id"] = proto_row.get("slot_id", proto_row.get("ui_slot", np.nan))
+        res["prototype_ui_slot"] = proto_row.get("ui_slot", proto_row.get("slot_id", np.nan))
+        res["prototype_ui_slot_label"] = proto_row.get("ui_slot_label", proto_row.get("ui_slot", np.nan))
+        res["prototype_base_pos"] = proto_row.get("base_pos", np.nan)
+        res["prototype_merged_pos"] = proto_row.get("merged_pos", np.nan)
+        res["prototype_cluster"] = proto_row.get("dominant_cluster", np.nan)
+        res["n_features_used"] = len(valid_cols)
+        res["feature_set"] = feature_set
+
+        for idx, c in enumerate(valid_cols):
+            res[f"z_{c}"] = X_players_z[:, idx]
+            res[f"proto_z_{c}"] = X_proto_z[0, idx]
+
+        res = self._append_distance_columns(res, dist, metric=metric)
+        res = self._append_scores(res)
+
+        res = res.sort_values(score_method, ascending=False).copy()
+        res["rank"] = np.arange(1, len(res) + 1)
+
+        return res, proto_row, valid_cols
+
+    # ======================================================
+    # PERFIL DEL PROTOTIPO SELECCIONADO
+    # ======================================================
+    @staticmethod
+    def _feature_type_label(feature: str) -> str:
+        f = str(feature)
+        if f.endswith("_p90"):
+            return "Por 90 minutos"
+        if "share" in f or f in {"pass_acc", "wide_share", "central_share"}:
+            return "Proporción / participación"
+        if f.startswith("mean_") or f.endswith("_mean") or f.startswith("avg_"):
+            return "Promedio / ubicación"
+        if f.startswith("std_"):
+            return "Dispersión espacial"
+        if f.startswith("passdir_"):
+            return "Dirección de pase"
+        return "Variable de perfil"
+
+    def build_prototype_profile_table(
+        self,
+        proto_row: Optional[pd.Series],
+        valid_cols: Optional[List[str]] = None,
+        include_only_candidate_features: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Convierte la fila del prototipo seleccionado en una tabla legible para la app.
+        Por defecto muestra las variables candidatas del índice, marcando cuáles sí se usaron.
+        """
+        if proto_row is None:
+            return pd.DataFrame()
+
+        if not isinstance(proto_row, pd.Series):
+            proto_row = pd.Series(proto_row)
+
+        used_set = set(valid_cols or [])
+
+        area_lookup = {}
+        for block_name, cols in TACTICAL_BLOCKS.items():
+            for c in cols:
+                area_lookup[c] = block_name
+
+        area_labels = {
+            "progression": "Progresión",
+            "passing": "Pase",
+            "spatial": "Ocupación espacial",
+            "defensive": "Defensa",
+            "offensive": "Ataque",
+            "team_context": "Participación en equipo",
+        }
+
+        if include_only_candidate_features:
+            candidate_cols = [c for c in CANDIDATE_FEATURE_COLS if c in proto_row.index]
+        else:
+            candidate_cols = [
+                c for c in proto_row.index
+                if c not in {
+                    "team_id", "event_team_name", "formation_final", "slot_id",
+                    "base_pos", "merged_pos", "dominant_cluster", "ui_slot",
+                    "prototype_key", "ui_slot_label", "merged_pos_abbr"
+                }
+            ]
+
+        rows = []
+        for c in candidate_cols:
+            value = pd.to_numeric(pd.Series([proto_row.get(c, np.nan)]), errors="coerce").iloc[0]
+            formatted_value = np.nan if pd.isna(value) else float(value)
+
+            block = area_lookup.get(c, "other")
+            rows.append({
+                "Área táctica": area_labels.get(block, "Otras variables"),
+                "Variable": c,
+                "Valor del prototipo": formatted_value,
+                "Usada en índice": "Sí" if c in used_set else "No",
+                "Tipo": self._feature_type_label(c),
+            })
+
+        out = pd.DataFrame(rows)
+        if out.empty:
+            return out
+
+        out["Valor del prototipo"] = pd.to_numeric(out["Valor del prototipo"], errors="coerce").round(4)
+        out["_used_order"] = out["Usada en índice"].map({"Sí": 0, "No": 1}).fillna(2)
+        out = out.sort_values(["Área táctica", "_used_order", "Variable"]).drop(columns=["_used_order"]).reset_index(drop=True)
+        return out
 
     # ======================================================
     # BLOQUES TÁCTICOS Y SCORE COMPUESTO

@@ -107,7 +107,7 @@ div[data-testid="stHorizontalBlock"]{
     background:
         linear-gradient(90deg, transparent 49.72%, rgba(255,255,255,.88) 49.92%, rgba(255,255,255,.88) 50.08%, transparent 50.28%),
         radial-gradient(circle at 50% 50%, transparent 0 39px, rgba(255,255,255,.80) 40px 42px, transparent 43px),
-        repeating-linear-gradient(90deg, rgba(76,150,49,.96) 0px, rgba(76,150,49,.96) 86px, rgba(52,116,36,.96) 86px, rgba(52,116,36,.96) 172px),
+        linear-gradient(180deg, rgba(0,0,0,1), rgba(0,0,0,1)),
         linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.08));
     box-shadow:inset 0 0 26px rgba(0,0,0,.12),0 8px 18px rgba(18,50,93,.10)!important;
 }
@@ -569,13 +569,16 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
+# Placeholder global para inyectar coordenadas dinámicas sin meter un elemento invisible dentro del panel de la cancha.
+pitch_coord_css_anchor = st.empty()
+
 @st.cache_resource(show_spinner=False)
 def get_engine():
     return TacticalCompatibilityEngine()
 
 engine = get_engine()
 
-PROTOTYPE_SOURCE = "weighted"
+PROTOTYPE_SOURCE = "slot_app_ready"
 METRIC = "euclidean"
 SCORE_METHOD = "compat_score_rank_0_100"
 FEATURE_SET = "full"
@@ -587,8 +590,345 @@ POSITION_LABELS = {"LEFT_ATTACK_WIDE":"LAW","LEFT_WIDE_MID":"LWM","RIGHT_ATTACK_
 BLOCK_LABELS = {"progression":"Progresión","passing":"Pase","spatial":"Ocupación espacial","defensive":"Defensa","offensive":"Ataque","team_context":"Participación en equipo"}
 FOOT_LABELS = {"left":"Izquierdo","right":"Derecho","both":"Ambos","none":"Cualquiera","nan":"No disponible","":"No disponible"}
 POSITION_DESCRIPTIONS = {"GK":"Portero","DC":"Defensa central","DL":"Lateral izquierdo","DR":"Lateral derecho","DMC":"Mediocentro defensivo","MC":"Mediocentro","AMC":"Mediocampista ofensivo","FW":"Delantero centro","LEFT_ATTACK_WIDE":"Atacante de banda izquierda","RIGHT_ATTACK_WIDE":"Atacante de banda derecha","LEFT_WIDE_MID":"Volante/carrilero izquierdo","RIGHT_WIDE_MID":"Volante/carrilero derecho","AML":"Extremo izquierdo","AMR":"Extremo derecho","FWL":"Delantero izquierdo","FWR":"Delantero derecho","ML":"Volante izquierdo","MR":"Volante derecho","DML":"Carrilero izquierdo","DMR":"Carrilero derecho"}
-PITCH_COORDS = {"GK":(8,50),"DL":(18,24),"DC":(28,50),"DR":(18,76),"DML":(24,24),"DMR":(24,76),"DMC":(38,50),"MC":(50,50),"AMC":(61,24),"ML":(57,76),"MR":(73,76),"LEFT_WIDE_MID":(61,76),"RIGHT_WIDE_MID":(73,76),"AML":(78,24),"AMR":(78,76),"LEFT_ATTACK_WIDE":(78,24),"RIGHT_ATTACK_WIDE":(78,76),"FWL":(86,34),"FWR":(86,66),"FW":(92,50)}
+# ======================================================
+# COORDENADAS DE CANCHA POR FORMACIÓN
+# x = avance horizontal: 0 defensa propia, 100 ataque
+# y = carril vertical: 0 izquierda, 100 derecha
+# ======================================================
 
+GENERIC_SLOT_COORDS = {
+    "GK": (7, 50),
+
+    "DL": (25, 20),
+    "DC": (25, 50),
+    "DC_1": (25, 35),
+    "DC_2": (25, 50),
+    "DC_3": (25, 65),
+    "DR": (25, 80),
+
+    "DMC": (42, 50),
+    "DMC_1": (43, 42),
+    "DMC_2": (43, 58),
+
+    "LWM": (55, 18),
+    "MC": (55, 50),
+    "MC_1": (55, 34),
+    "MC_2": (55, 50),
+    "MC_3": (55, 66),
+    "RWM": (55, 82),
+
+    "AMC": (70, 50),
+    "AMC_1": (70, 42),
+    "AMC_2": (70, 58),
+
+    "LAW": (82, 18),
+    "FW": (91, 50),
+    "FW_1": (89, 42),
+    "FW_2": (89, 58),
+    "RAW": (82, 82),
+}
+
+
+FORMATION_SLOT_COORDS = {
+    "3-2-4-1": {
+        "GK": (7, 50),
+
+        "DC_1": (25, 30),
+        "DC_2": (25, 50),
+        "DC_3": (25, 70),
+
+        "DMC_1": (43, 42),
+        "DMC_2": (43, 58),
+
+        "LAW": (70, 18),
+        "AMC_1": (70, 42),
+        "AMC_2": (70, 58),
+        "RAW": (70, 82),
+
+        "FW": (91, 50),
+    },
+
+    "3-4-2-1": {
+        "GK": (7, 50),
+
+        "DC_1": (25, 30),
+        "DC_2": (25, 50),
+        "DC_3": (25, 70),
+
+        "LWM": (50, 18),
+        "MC_1": (50, 42),
+        "MC_2": (50, 58),
+        "RWM": (50, 82),
+
+        "AMC_1": (70, 42),
+        "AMC_2": (70, 58),
+
+        "FW": (91, 50),
+    },
+
+    "3-4-3": {
+        "GK": (7, 50),
+
+        "DC_1": (25, 30),
+        "DC_2": (25, 50),
+        "DC_3": (25, 70),
+
+        "LWM": (50, 18),
+        "MC_1": (50, 42),
+        "MC_2": (50, 58),
+        "RWM": (50, 82),
+
+        "LAW": (82, 18),
+        "FW": (82, 50),
+        "RAW": (82, 82),
+    },
+
+"3-5-2": {
+    "GK": (7, 50),
+
+    # Línea de 3 centrales
+    "DC_1": (25, 30),
+    "DC_2": (25, 50),
+    "DC_3": (25, 70),
+
+    # Línea de 5 mediocampistas / carrileros
+    # Todos quedan en la misma X, pero con más separación en Y
+    "LWM": (55, 12),
+    "DMC": (55, 48),
+    "MC_1": (55, 30),
+    "MC_2": (55, 66),
+    "MC_3": (55, 48),
+    "RWM": (55, 88),
+
+    # Si alguna versión de 3-5-2 trae AMC, se adelanta un poco
+    # para no montarse sobre los MC.
+    "AMC": (70, 50),
+
+    # Línea de 2 delanteros
+    "FW_1": (89, 42),
+    "FW_2": (89, 58),
+
+    # Fallback por si aparece FW en vez de FW_1/FW_2
+    "FW": (89, 50),
+},
+
+    "4-1-2-1-2": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "DMC": (42, 50),
+
+        "MC_1": (56, 40),
+        "MC_2": (56, 60),
+
+        "AMC": (70, 50),
+
+        "FW_1": (89, 42),
+        "FW_2": (89, 58),
+    },
+
+    "4-1-4-1": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "DMC": (42, 50),
+
+        "LWM": (62, 18),
+        "MC_1": (62, 42),
+        "MC_2": (62, 58),
+        "RWM": (62, 82),
+
+        "FW": (91, 50),
+    },
+
+    "4-2-2-2": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "DMC_1": (44, 42),
+        "DMC_2": (44, 58),
+
+        "AMC_1": (68, 42),
+        "AMC_2": (68, 58),
+
+        "FW_1": (89, 42),
+        "FW_2": (89, 58),
+    },
+
+    "4-2-3-1": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "DMC_1": (43, 42),
+        "DMC_2": (43, 58),
+
+        "LAW": (70, 18),
+        "AMC": (70, 50),
+        "RAW": (70, 82),
+
+        "FW": (91, 50),
+    },
+
+    "4-3-1-2": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "MC_1": (57, 34),
+        "MC_2": (57, 50),
+        "MC_3": (57, 66),
+
+        "AMC": (70, 50),
+
+        "FW_1": (89, 42),
+        "FW_2": (89, 58),
+    },
+
+    "4-3-3": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "MC_1": (57, 34),
+        "MC_2": (57, 50),
+        "MC_3": (57, 66),
+
+        "LAW": (82, 18),
+        "FW": (82, 50),
+        "RAW": (82, 82),
+    },
+
+    "4-4-1-1": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "LWM": (55, 18),
+        "MC_1": (55, 42),
+        "MC_2": (55, 58),
+        "RWM": (55, 82),
+
+        "AMC": (72, 50),
+
+        "FW": (91, 50),
+    },
+
+    "4-4-2": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "LWM": (55, 18),
+        "MC_1": (55, 42),
+        "MC_2": (55, 58),
+        "RWM": (55, 82),
+
+        "FW_1": (89, 42),
+        "FW_2": (89, 58),
+    },
+
+    "4-5-1": {
+        "GK": (7, 50),
+
+        "DL": (25, 20),
+        "DC_1": (25, 42),
+        "DC_2": (25, 58),
+        "DR": (25, 80),
+
+        "LWM": (56, 16),
+        "MC_1": (56, 36),
+        "MC_2": (56, 50),
+        "MC_3": (56, 64),
+        "RWM": (56, 84),
+
+        "FW": (91, 50),
+    },
+
+    "5-3-2": {
+        "GK": (7, 50),
+
+        "DL": (25, 16),
+        "DC_1": (25, 34),
+        "DC_2": (25, 50),
+        "DC_3": (25, 66),
+        "DR": (25, 84),
+
+        "MC_1": (58, 36),
+        "MC_2": (58, 50),
+        "MC_3": (58, 64),
+
+        "FW_1": (89, 42),
+        "FW_2": (89, 58),
+    },
+
+    "5-4-1": {
+        "GK": (7, 50),
+
+        "DL": (25, 16),
+        "DC_1": (25, 34),
+        "DC_2": (25, 50),
+        "DC_3": (25, 66),
+        "DR": (25, 84),
+
+        "LWM": (58, 18),
+        "MC_1": (58, 42),
+        "MC_2": (58, 58),
+        "RWM": (58, 82),
+
+        "FW": (91, 50),
+    },
+}
+def inject_pitch_coords_css(formation_final: str, available_positions: list[str]) -> None:
+    coords = FORMATION_SLOT_COORDS.get(str(formation_final), GENERIC_SLOT_COORDS)
+
+    css_lines = ["<style>"]
+
+    for pos in available_positions:
+        pos = str(pos)
+        x, y = coords.get(pos, GENERIC_SLOT_COORDS.get(pos, (50, 50)))
+        css_lines.append(
+            f".st-key-pitchpos_{pos}"
+            "{"
+            f"left:{x}%!important;"
+            f"top:{y}%!important;"
+            "}"
+        )
+
+    css_lines.append("</style>")
+    css_text = "\n".join(css_lines)
+    target = globals().get("pitch_coord_css_anchor", None)
+    if target is not None:
+        target.markdown(css_text, unsafe_allow_html=True)
+    else:
+        st.markdown(css_text, unsafe_allow_html=True)
 def name_col_for(df: pd.DataFrame) -> str | None:
     for col in ["lineup_player_name", "player_name", "name"]:
         if col in df.columns:
@@ -695,18 +1035,37 @@ def block_display(block_df: pd.DataFrame) -> pd.DataFrame:
     out["Lectura"] = out["prototype_vs_player"].replace({"por encima":"Por encima del prototipo","por debajo":"Por debajo del prototipo","alineado":"Alineado con el prototipo"})
     return out[["Área","Ajuste","Lectura"]]
 
-def get_inferred_base_position(proto_df: pd.DataFrame, team_name: str, merged_pos: str) -> str | None:
-    preview = proto_df[(proto_df["event_team_name"].astype(str) == str(team_name)) & (proto_df["merged_pos"].astype(str) == str(merged_pos))].copy()
+def get_inferred_base_position(proto_df: pd.DataFrame, team_name: str, formation_final: str, ui_slot: str) -> str | None:
+    preview = proto_df.copy()
+    if "event_team_name" in preview.columns:
+        preview = preview[preview["event_team_name"].astype(str) == str(team_name)].copy()
+    if "formation_final" in preview.columns:
+        preview = preview[preview["formation_final"].astype(str) == str(formation_final)].copy()
+    slot_col = "ui_slot" if "ui_slot" in preview.columns else ("slot_id" if "slot_id" in preview.columns else None)
+    if slot_col is not None:
+        preview = preview[preview[slot_col].astype(str) == str(ui_slot)].copy()
     if preview.empty:
         return None
     if "base_pos" in preview.columns and preview["base_pos"].notna().any():
         return str(preview["base_pos"].mode().iloc[0])
-    return str(merged_pos)
+    return str(ui_slot)
 
 def position_description(value: Any) -> str:
     if pd.isna(value):
         return ""
-    return POSITION_DESCRIPTIONS.get(str(value).strip(), "Grupo posicional")
+    raw = str(value).strip()
+    if raw in {"LAW", "RAW", "LWM", "RWM"}:
+        return {
+            "LAW": "Atacante de banda izquierda",
+            "RAW": "Atacante de banda derecha",
+            "LWM": "Volante/carrilero izquierdo",
+            "RWM": "Volante/carrilero derecho",
+        }[raw]
+    if "_" in raw:
+        base, num = raw.rsplit("_", 1)
+        base_desc = POSITION_DESCRIPTIONS.get(base, base)
+        return f"{base_desc} {num}"
+    return POSITION_DESCRIPTIONS.get(raw, "Slot táctico")
 
 def get_query_position() -> str | None:
     try:
@@ -733,24 +1092,31 @@ def keyed_container(border: bool = False, key: str | None = None):
 
 
 def set_pending_position(pos: str) -> None:
-    st.session_state["pending_merged_pos"] = str(pos)
+    st.session_state["pending_slot"] = str(pos)
 
 
 def set_selected_candidate_idx(idx: int) -> None:
     st.session_state["selected_candidate_idx"] = int(idx)
 
-def render_position_pitch(position_options: list[str], selected_position: str) -> str:
+def render_position_pitch(
+    position_options: list[str],
+    selected_position: str,
+    formation_final: str,
+) -> str:
     available_positions = [str(pos) for pos in position_options]
     available_set = set(available_positions)
 
     if selected_position not in available_set and available_positions:
         selected_position = available_positions[0]
-        st.session_state["pending_merged_pos"] = selected_position
+        st.session_state["pending_slot"] = selected_position
 
-    selected_position = str(st.session_state.get("pending_merged_pos", selected_position))
+    selected_position = str(st.session_state.get("pending_slot", selected_position))
     if selected_position not in available_set and available_positions:
         selected_position = available_positions[0]
-        st.session_state["pending_merged_pos"] = selected_position
+        st.session_state["pending_slot"] = selected_position
+
+    # Coordenadas dinámicas según la formación seleccionada
+    inject_pitch_coords_css(formation_final, available_positions)
 
     with keyed_container(border=False, key="pitch_abs_area"):
         for pos in available_positions:
@@ -764,7 +1130,7 @@ def render_position_pitch(position_options: list[str], selected_position: str) -
                 help=position_description(pos),
             )
 
-    return str(st.session_state.get("pending_merged_pos", selected_position))
+    return str(st.session_state.get("pending_slot", selected_position))
 
 def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
     if display_df.empty:
@@ -834,12 +1200,13 @@ def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
 
     return clicked_rows
 
-def compute_ranking(proto_df, players_df, team_name, merged_pos, exclude_same_team, preferred_foot, min_height, max_value_target):
-    raw_df, proto_row, valid_cols = engine.compute_for_target_merged(
+def compute_ranking(proto_df, players_df, team_name, formation_final, ui_slot, exclude_same_team, preferred_foot, min_height, max_value_target):
+    raw_df, proto_row, valid_cols = engine.compute_for_target_slot(
         proto_df=proto_df,
         players_df=players_df,
         team_name=team_name,
-        merged_pos=merged_pos,
+        formation_final=formation_final,
+        ui_slot=ui_slot,
         allowed_leagues=ALLOWED_LEAGUES,
         exclude_same_team=exclude_same_team,
         score_method=SCORE_METHOD,
@@ -865,6 +1232,9 @@ def compute_ranking(proto_df, players_df, team_name, merged_pos, exclude_same_te
         tactical_base_col=SCORE_METHOD,
     )
     return raw_df, final_df, proto_row, valid_cols
+
+
+
 
 
 def render_player_detail_content(selected_player: str, selected_row: pd.Series, raw_df: pd.DataFrame, proto_row: pd.Series, valid_cols: list[str]):
@@ -941,29 +1311,72 @@ config_col, pitch_col, pref_col = st.columns([0.92, 1.65, 0.92], gap="small")
 
 with config_col:
     with keyed_container(border=True, key="config_panel"):
-        panel_head("⌕", "Configuración de búsqueda", "Define el club objetivo y lanza la búsqueda.")
-        team_name = st.selectbox("Club objetivo", team_options, index=team_default_idx, key="team_select_widget")
-        exclude_same_team = st.checkbox("Excluir jugadores del club objetivo", value=bool(st.session_state.get("pending_exclude_same_team", True)), key="exclude_same_team_widget")
-        search_clicked = st.button("🔎 Buscar jugadores", type="primary", use_container_width=True)
+        panel_head("⌕", "Configuración de búsqueda", "Define club, formación y lanza la búsqueda.")
 
+        # Club y formación en la misma fila para que el botón no se recorte
+        club_col, form_col = st.columns([1, 1], gap="small")
 
-if team_name != st.session_state.get("pending_team_name"):
-    st.session_state["pending_team_name"] = team_name
-    st.session_state.pop("pending_merged_pos", None)
+        with club_col:
+            team_name = st.selectbox(
+                "Club objetivo",
+                team_options,
+                index=team_default_idx,
+                key="team_select_widget",
+            )
 
-position_options = engine.get_merged_position_options(proto_df, team_name)
+        if team_name != st.session_state.get("pending_team_name"):
+            st.session_state["pending_team_name"] = team_name
+            st.session_state.pop("pending_formation", None)
+            st.session_state.pop("pending_slot", None)
+
+        formation_options = engine.get_formation_options(proto_df, team_name)
+        if not formation_options:
+            st.warning("No hay formaciones disponibles para ese club.")
+            st.stop()
+
+        if st.session_state.get("pending_formation") not in formation_options:
+            st.session_state["pending_formation"] = formation_options[0]
+
+        formation_default_idx = formation_options.index(st.session_state["pending_formation"])
+
+        with form_col:
+            formation_final = st.selectbox(
+                "Formación objetivo",
+                formation_options,
+                index=formation_default_idx,
+                key="formation_select_widget",
+            )
+
+        if formation_final != st.session_state.get("pending_formation"):
+            st.session_state["pending_formation"] = formation_final
+            st.session_state.pop("pending_slot", None)
+
+        exclude_same_team = st.checkbox(
+            "Excluir jugadores del club objetivo",
+            value=bool(st.session_state.get("pending_exclude_same_team", True)),
+            key="exclude_same_team_widget",
+        )
+
+        search_clicked = st.button(
+            "🔎 Buscar jugadores",
+            type="primary",
+            use_container_width=True,
+        )
+
+position_options = engine.get_slot_options(proto_df, team_name, formation_final)
 if not position_options:
-    st.warning("No hay grupos posicionales disponibles para ese club.")
+    st.warning("No hay slots disponibles para ese club y formación.")
     st.stop()
-if st.session_state.get("pending_merged_pos") not in position_options:
-    st.session_state["pending_merged_pos"] = position_options[0]
+
+if st.session_state.get("pending_slot") not in position_options:
+    st.session_state["pending_slot"] = position_options[0]
 
 with pitch_col:
     with keyed_container(border=True, key="pitch_panel"):
-        merged_pos = render_position_pitch(position_options, st.session_state["pending_merged_pos"])
+        selected_slot = render_position_pitch(position_options, st.session_state["pending_slot"], formation_final)
 
-inferred_base_pos = get_inferred_base_position(proto_df, team_name, merged_pos)
-auto_preferred_foot = engine.infer_auto_preferred_foot(inferred_base_pos, merged_pos)
+inferred_base_pos = get_inferred_base_position(proto_df, team_name, formation_final, selected_slot)
+auto_preferred_foot = engine.infer_auto_preferred_foot(inferred_base_pos, selected_slot)
 auto_min_height = engine.infer_auto_min_height(inferred_base_pos) if inferred_base_pos else None
 _, _, max_value_target_team = engine.get_team_budget_value(players_df, team_name, divisor=6.0)
 
@@ -974,7 +1387,7 @@ with pref_col:
         if use_scouting_preferences:
             foot_options = ["none", "left", "right", "both"]
             default_foot = auto_preferred_foot if auto_preferred_foot in foot_options else "none"
-            pref_key_suffix = build_context_key(team_name, merged_pos)
+            pref_key_suffix = build_context_key(team_name, formation_final, selected_slot)
             foot_choice = st.selectbox("Pie deseado", foot_options, index=foot_options.index(default_foot), format_func=lambda x: FOOT_LABELS.get(x, x), key=f"foot_choice_{pref_key_suffix}")
             preferred_foot = None if foot_choice == "none" else foot_choice
             pref_c1, pref_c2 = st.columns([1, 1], gap="small")
@@ -999,7 +1412,8 @@ shortlist_size = DEFAULT_SHORTLIST_SIZE
 if search_clicked:
     st.session_state["has_searched"] = True
     st.session_state["applied_team_name"] = team_name
-    st.session_state["applied_merged_pos"] = merged_pos
+    st.session_state["applied_formation"] = formation_final
+    st.session_state["applied_slot"] = selected_slot
     st.session_state["applied_shortlist_size"] = shortlist_size
     st.session_state["applied_exclude_same_team"] = exclude_same_team
     st.session_state["applied_preferred_foot"] = preferred_foot
@@ -1009,8 +1423,9 @@ if search_clicked:
 
 if not st.session_state.get("has_searched", False):
     selected_club_txt = html.escape(str(team_name))
-    selected_pos_txt = html.escape(format_group_pos(merged_pos))
-    selected_pos_desc = html.escape(position_description(merged_pos))
+    selected_formation_txt = html.escape(str(formation_final))
+    selected_pos_txt = html.escape(format_group_pos(selected_slot))
+    selected_pos_desc = html.escape(position_description(selected_slot))
     pref_status = "activadas" if use_scouting_preferences else "desactivadas"
 
     start_guide_html = (
@@ -1025,7 +1440,8 @@ if not st.session_state.get("has_searched", False):
         f'</div>'
         f'<div class="start-guide-current">'
         f'<div class="start-guide-chip">Club seleccionado: <b>{selected_club_txt}</b></div>'
-        f'<div class="start-guide-chip">Posición marcada: <b>{selected_pos_txt}</b> · {selected_pos_desc}</div>'
+        f'<div class="start-guide-chip">Formación: <b>{selected_formation_txt}</b></div>'
+        f'<div class="start-guide-chip">Slot marcado: <b>{selected_pos_txt}</b> · {selected_pos_desc}</div>'
         f'<div class="start-guide-chip">Preferencias: <b>{pref_status}</b></div>'
         f'</div>'
         f'</div>'
@@ -1038,8 +1454,8 @@ if not st.session_state.get("has_searched", False):
         f'</div>'
         f'<div class="start-guide-step">'
         f'<div class="start-guide-step-num">2</div>'
-        f'<div class="start-guide-step-title">Marca una posición</div>'
-        f'<div class="start-guide-step-text">Haz clic en la cancha para enfocar la búsqueda en el grupo posicional disponible.</div>'
+        f'<div class="start-guide-step-title">Marca un slot</div>'
+        f'<div class="start-guide-step-text">Haz clic en la cancha para enfocar la búsqueda en el rol táctico exacto disponible.</div>'
         f'</div>'
         f'<div class="start-guide-step">'
         f'<div class="start-guide-step-num">3</div>'
@@ -1059,24 +1475,25 @@ if not st.session_state.get("has_searched", False):
     st.stop()
 
 applied_team_name = st.session_state.get("applied_team_name", team_name)
-applied_merged_pos = st.session_state.get("applied_merged_pos", merged_pos)
+applied_formation = st.session_state.get("applied_formation", formation_final)
+applied_slot = st.session_state.get("applied_slot", selected_slot)
 applied_shortlist_size = int(st.session_state.get("applied_shortlist_size", shortlist_size))
 applied_exclude_same_team = bool(st.session_state.get("applied_exclude_same_team", exclude_same_team))
 applied_preferred_foot = st.session_state.get("applied_preferred_foot", preferred_foot)
 applied_min_height = st.session_state.get("applied_min_height", min_height)
 applied_max_value_target = st.session_state.get("applied_max_value_target", max_value_target)
 
-pending_context = build_context_key(team_name, merged_pos, shortlist_size, exclude_same_team, preferred_foot, min_height, max_value_target)
-applied_context = build_context_key(applied_team_name, applied_merged_pos, applied_shortlist_size, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
+pending_context = build_context_key(team_name, formation_final, selected_slot, shortlist_size, exclude_same_team, preferred_foot, min_height, max_value_target)
+applied_context = build_context_key(applied_team_name, applied_formation, applied_slot, applied_shortlist_size, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
 st.session_state["applied_context"] = applied_context
 
 # ======================================================
 # CÁLCULO CON CACHE DE SESIÓN
 # ======================================================
-ranking_context = build_context_key(applied_team_name, applied_merged_pos, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
+ranking_context = build_context_key(applied_team_name, applied_formation, applied_slot, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
 if st.session_state.get("ranking_context") != ranking_context:
     with st.spinner("Buscando candidatos compatibles..."):
-        raw_df, final_df, proto_row, valid_cols = compute_ranking(proto_df, players_df, applied_team_name, applied_merged_pos, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
+        raw_df, final_df, proto_row, valid_cols = compute_ranking(proto_df, players_df, applied_team_name, applied_formation, applied_slot, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
     st.session_state["ranking_context"] = ranking_context
     st.session_state["ranking_raw_df"] = raw_df
     st.session_state["ranking_final_df"] = final_df
@@ -1108,7 +1525,7 @@ with rec_col:
     <div class="candidate-card"><div class="candidate-card-flex"><div class="avatar-placeholder">{html.escape(player_initials(top_player))}</div><div>
     <div class="mini-label">Mejor candidato recomendado</div><div class="candidate-name">{html.escape(top_player)}</div>
     <div class="candidate-meta">{html.escape(str(top.get('event_team_name', 'Club no disponible')))}</div>
-    <div class="position-pill">{html.escape(format_group_pos(top.get('merged_pos', applied_merged_pos)))}</div></div></div></div>
+    <div class="position-pill">{html.escape(format_group_pos(top.get('merged_pos', applied_slot)))}</div></div></div></div>
     """, unsafe_allow_html=True)
 with score_col:
     st.markdown(f"<div class='score-card'><div class='score-label'>Score final de compatibilidad</div><div class='big-score'>{html.escape(top_score_text)}</div><div class='score-status'>{html.escape(score_status(top_score))}</div></div>", unsafe_allow_html=True)
@@ -1124,6 +1541,9 @@ with height_col:
 metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4, gap="small")
 avg_top = pd.to_numeric(shortlist_df["final_scouting_score_0_100"], errors="coerce").mean()
 
+# Perfil del prototipo/slot seleccionado
+
+
 section_left, section_right = st.columns([1, .24], gap="small")
 
 with section_left:
@@ -1137,7 +1557,7 @@ with section_right:
     if not shortlist_display.empty:
         csv_data = shortlist_display.to_csv(index=False).encode("utf-8")
         safe_team = str(applied_team_name).replace(" ", "_")
-        safe_pos = format_group_pos(applied_merged_pos).replace(" ", "_")
+        safe_pos = format_group_pos(applied_slot).replace(" ", "_")
 
 selection_context = build_context_key(ranking_context, applied_shortlist_size)
 if st.session_state.get("selection_context") != selection_context:

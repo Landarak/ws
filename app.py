@@ -27,7 +27,7 @@ CSS = """
 .stSelectbox label,.stNumberInput label,.stCheckbox label{font-size:.86rem!important}.stSelectbox,.stNumberInput,.stCheckbox{margin-bottom:.08rem}div[data-testid="stButton"]>button{min-height:40px!important;border-radius:13px!important;font-weight:850!important}div[data-testid="stButton"]>button[kind="primary"]{background:linear-gradient(135deg,#15b8b1,#0ca4be)!important;border:0!important;color:#fff!important;box-shadow:0 10px 20px rgba(19,181,177,.20)!important}.stDownloadButton button{border-radius:12px!important;border-color:rgba(19,181,177,.42)!important;color:var(--teal-dark)!important;font-weight:850!important;min-height:36px!important}
 .pitch-wrap{padding:.05rem 0 0 0}.pitch-field{position:relative;width:100%;height:172px;overflow:hidden;border-radius:13px;border:3px solid rgba(255,255,255,.96);background:linear-gradient(90deg,transparent 49.72%,rgba(255,255,255,.86) 49.92%,rgba(255,255,255,.86) 50.08%,transparent 50.28%),radial-gradient(circle at 50% 50%,transparent 0 39px,rgba(255,255,255,.78) 40px 42px,transparent 43px),repeating-linear-gradient(90deg,rgba(76,150,49,.96) 0px,rgba(76,150,49,.96) 68px,rgba(52,116,36,.96) 68px,rgba(52,116,36,.96) 136px),linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.08));box-shadow:inset 0 0 28px rgba(0,0,0,.12),0 8px 18px rgba(18,50,93,.10)}.pitch-field:before,.pitch-field:after{content:"";position:absolute;top:22%;width:14%;height:56%;border:2px solid rgba(255,255,255,.78);z-index:1;pointer-events:none}.pitch-field:before{left:-2px;border-left:0}.pitch-field:after{right:-2px;border-right:0}.six-left,.six-right{position:absolute;top:36%;width:6%;height:28%;border:2px solid rgba(255,255,255,.76);z-index:2;pointer-events:none}.six-left{left:-2px;border-left:0}.six-right{right:-2px;border-right:0}.pitch-dot{position:absolute;width:6px;height:6px;border-radius:999px;background:rgba(255,255,255,.80);transform:translate(-50%,-50%);z-index:2}.dot-left{left:15%;top:50%}.dot-center{left:50%;top:50%}.dot-right{left:85%;top:50%}.pos-chip{position:absolute;z-index:5;transform:translate(-50%,-50%);min-width:49px;height:31px;padding:0 .58rem;border-radius:8px;border:1px solid rgba(18,50,93,.16);background:rgba(255,255,255,.96);color:var(--navy)!important;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;line-height:1;font-size:.77rem;font-weight:950;text-decoration:none!important;box-shadow:0 6px 13px rgba(18,50,93,.15);transition:all .15s ease}.pos-chip:hover{transform:translate(-50%,-50%) translateY(-1px);border-color:rgba(19,181,177,.64);box-shadow:0 0 0 3px rgba(19,181,177,.14),0 7px 16px rgba(18,50,93,.18);color:var(--teal-dark)!important}.pos-chip.selected{background:linear-gradient(135deg,#13b5b1,#0aa8c9);border-color:rgba(255,255,255,.95);color:#fff!important;box-shadow:0 0 0 4px rgba(19,181,177,.26),0 0 16px rgba(19,181,177,.62)}.pitch-note{text-align:center;margin-top:.38rem;color:var(--muted);font-size:.80rem}.pitch-note b{color:var(--teal-dark)}
 .result-banner{display:flex;align-items:center;gap:.8rem;border-radius:16px;border:1px solid rgba(19,181,177,.26);background:linear-gradient(135deg,rgba(219,247,252,.88),rgba(244,252,255,.94));box-shadow:0 8px 20px rgba(19,181,177,.07);padding:.58rem .75rem;margin:.48rem 0 .38rem 0}.target-icon{width:42px;height:42px;min-width:42px;border-radius:999px;display:grid;place-items:center;background:rgba(19,181,177,.13);border:1px solid rgba(19,181,177,.32);color:var(--teal-dark);font-size:1.15rem;font-weight:950}.result-title{font-weight:950;font-size:1.18rem;color:var(--navy);letter-spacing:-.02em}.result-text{margin:.12rem 0 0 0;color:var(--muted);font-size:.88rem}.result-text b{color:var(--teal-dark)}
-.candidate-card,.score-card,.stat-card,.metric-strip-card{border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.94);box-shadow:0 8px 20px rgba(18,50,93,.05)}.candidate-card{padding:.65rem .75rem;min-height:104px}.candidate-card-flex{display:flex;align-items:center;gap:.75rem}.avatar-placeholder{width:60px;height:60px;border-radius:999px;display:grid;place-items:center;background:linear-gradient(135deg,#e7f8fa,#f6fbff);border:1px solid rgba(19,181,177,.28);color:var(--teal-dark);font-size:1.12rem;font-weight:950}.mini-label{color:var(--muted);font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.candidate-name{font-size:1.20rem;font-weight:950;line-height:1.1;color:var(--navy);margin-top:.08rem}.candidate-meta{color:var(--muted);font-size:.85rem;margin-top:.12rem}.position-pill{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:22px;margin-top:.28rem;border-radius:8px;border:1px solid rgba(19,181,177,.34);background:rgba(19,181,177,.08);color:var(--teal-dark);font-weight:900;font-size:.75rem;padding:0 .42rem}.score-card,.stat-card{min-height:104px;padding:.65rem .58rem;text-align:center;display:flex;flex-direction:column;justify-content:center}.score-label,.stat-label{color:var(--muted);font-size:.74rem;font-weight:800;line-height:1.2}.big-score{color:var(--teal-dark);font-size:2.0rem;font-weight:950;line-height:1.0;margin-top:.25rem}.score-status{color:var(--teal-dark);font-size:.88rem;font-weight:900;margin-top:.12rem}.stat-value{color:var(--navy);font-weight:900;font-size:.94rem;line-height:1.15;margin-top:.25rem;word-break:break-word}.stat-value.accent{color:var(--teal-dark);font-size:1.10rem}.metric-strip-card{min-height:54px;padding:.50rem .72rem;display:flex;align-items:center;gap:.55rem}.metric-strip-icon{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:rgba(19,181,177,.10);color:var(--teal-dark);font-weight:900}.metric-strip-label{color:var(--muted);font-size:.72rem;font-weight:800;line-height:1.1}.metric-strip-value{color:var(--navy);font-size:1.0rem;font-weight:950;line-height:1.1}.section-head{display:flex;align-items:center;gap:.55rem;margin-top:.10rem;margin-bottom:.10rem}.section-title{color:var(--navy);font-weight:950;font-size:1.05rem;line-height:1.1}.section-subtitle{color:var(--muted);font-size:.80rem;line-height:1.15;margin-top:.04rem}.footer-note{text-align:center;margin-top:.25rem;color:var(--muted);font-size:.78rem}div[data-testid="stDataFrame"]{border-radius:14px!important;overflow:hidden!important;border:1px solid rgba(148,163,184,.18)}div[data-testid="stAlert"]{padding:.35rem .55rem}
+.candidate-card,.score-card,.stat-card,.metric-strip-card{border-radius:16px;border:1px solid var(--border);background:rgba(255,255,255,.94);box-shadow:0 8px 20px rgba(18,50,93,.05)}.candidate-card{padding:.65rem .75rem;min-height:104px}.candidate-card-flex{display:flex;align-items:center;gap:.75rem}.avatar-placeholder{width:60px;height:60px;border-radius:999px;display:grid;place-items:center;background:linear-gradient(135deg,#e7f8fa,#f6fbff);border:1px solid rgba(19,181,177,.28);color:var(--teal-dark);font-size:1.12rem;font-weight:950}.mini-label{color:var(--muted);font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.candidate-name{font-size:1.20rem;font-weight:950;line-height:1.1;color:var(--navy);margin-top:.08rem}.candidate-meta{color:var(--muted);font-size:.85rem;margin-top:.12rem}.position-pill{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:22px;margin-top:.28rem;border-radius:8px;border:1px solid rgba(19,181,177,.34);background:rgba(19,181,177,.08);color:var(--teal-dark);font-weight:900;font-size:.75rem;padding:0 .42rem}.score-card,.stat-card{min-height:104px;padding:.65rem .58rem;text-align:center;display:flex;flex-direction:column;justify-content:center}.score-label,.stat-label{color:var(--muted);font-size:.74rem;font-weight:800;line-height:1.2}.big-score{color:var(--teal-dark);font-size:2.0rem;font-weight:950;line-height:1.0;margin-top:.25rem}.score-status{color:var(--teal-dark);font-size:.88rem;font-weight:900;margin-top:.12rem}.stat-value{color:var(--navy);font-weight:900;font-size:.94rem;line-height:1.15;margin-top:.25rem;word-break:break-word}.stat-value.accent{color:var(--teal-dark);font-size:1.10rem}.metric-strip-card{min-height:54px;padding:.50rem .72rem;display:flex;align-items:center;gap:.55rem}.metric-strip-icon{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:rgba(19,181,177,.10);color:var(--teal-dark);font-weight:900}.metric-strip-label{color:var(--muted);font-size:.72rem;font-weight:800;line-height:1.1}.metric-strip-value{color:var(--navy);font-size:1.0rem;font-weight:950;line-height:1.1}.section-head{display:flex;align-items:center;gap:.55rem;margin-top:.10rem;margin-bottom:.10rem;transform:translateY(-6px);}.section-title{color:var(--navy);font-weight:950;font-size:1.05rem;line-height:1.1}.section-subtitle{color:var(--muted);font-size:.80rem;line-height:1.15;margin-top:.04rem}.footer-note{text-align:center;margin-top:.25rem;color:var(--muted);font-size:.78rem}div[data-testid="stDataFrame"]{border-radius:14px!important;overflow:hidden!important;border:1px solid rgba(148,163,184,.18)}div[data-testid="stAlert"]{padding:.35rem .55rem}
 @media(max-width:1440px){.main .block-container{max-width:98vw;padding-left:.75rem;padding-right:.75rem}.pitch-field{height:158px}.candidate-card,.score-card,.stat-card{min-height:96px}.candidate-name{font-size:1.10rem}.big-score{font-size:1.78rem}.metric-strip-card{min-height:50px;padding:.42rem .62rem}}@media(max-width:1100px){.pitch-field{height:180px}}
 
 /* ===== Ajuste final: dashboard compacto y cancha con posiciones absolutas ===== */
@@ -273,6 +273,185 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
     margin-bottom:.08rem!important;
 }
 
+
+/* ===== Shortlist tipo tarjetas clickeables ===== */
+[class*="st-key-shortlist_card_"]{
+    position:relative!important;
+    width:100%!important;
+    min-height:48px!important;
+    margin-bottom:.28rem!important;
+}
+
+[class*="st-key-shortlist_card_"] pre,
+[class*="st-key-shortlist_card_"] code{
+    display:none!important;
+}
+
+.shortlist-card{
+    position:relative;
+    display:grid;
+    grid-template-columns:42px minmax(220px,1.55fr) 95px 120px 105px 95px minmax(210px,.95fr);
+    align-items:center;
+    gap:.72rem;
+    width:100%;
+    min-height:48px;
+    padding:.36rem .66rem;
+    border-radius:16px;
+    border:1px solid rgba(18,50,93,.12);
+    background:rgba(255,255,255,.96);
+    box-shadow:0 7px 18px rgba(18,50,93,.045);
+    transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
+}
+
+[class*="st-key-shortlist_card_"]:hover .shortlist-card{
+    transform:translateY(-1px);
+    border-color:rgba(19,181,177,.34);
+    box-shadow:0 10px 24px rgba(18,50,93,.075);
+    background:linear-gradient(180deg,#ffffff 0%,#f7fcff 100%);
+}
+
+.shortlist-card.selected{
+    border-color:rgba(19,181,177,.64);
+    background:linear-gradient(135deg,rgba(219,247,252,.82),rgba(255,255,255,.96));
+    box-shadow:0 0 0 3px rgba(19,181,177,.13),0 10px 24px rgba(18,50,93,.07);
+}
+
+.shortlist-rank{
+    width:30px;
+    height:30px;
+    border-radius:999px;
+    display:grid;
+    place-items:center;
+    background:rgba(19,181,177,.11);
+    color:var(--teal-dark);
+    font-size:.82rem;
+    font-weight:950;
+}
+
+.shortlist-player-name{
+    color:var(--navy);
+    font-weight:950;
+    font-size:.96rem;
+    line-height:1.08;
+}
+
+.shortlist-player-sub{
+    color:var(--muted);
+    font-size:.73rem;
+    margin-top:.12rem;
+    line-height:1.1;
+}
+
+.shortlist-field{
+    min-width:0;
+}
+
+.shortlist-label{
+    color:var(--muted);
+    font-size:.61rem;
+    font-weight:850;
+    text-transform:uppercase;
+    letter-spacing:.035em;
+    line-height:1;
+    margin-bottom:.20rem;
+}
+
+.shortlist-value{
+    color:var(--navy);
+    font-size:.82rem;
+    font-weight:800;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.shortlist-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:38px;
+    height:22px;
+    border-radius:8px;
+    padding:0 .42rem;
+    border:1px solid rgba(19,181,177,.35);
+    background:rgba(19,181,177,.08);
+    color:var(--teal-dark);
+    font-size:.76rem;
+    font-weight:950;
+}
+
+.shortlist-score-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.55rem;
+    color:var(--muted);
+    font-size:.68rem;
+    font-weight:850;
+    margin-bottom:.24rem;
+}
+
+.shortlist-score-top b{
+    color:var(--navy);
+    font-size:.82rem;
+    font-weight:950;
+}
+
+.shortlist-score-track{
+    height:8px;
+    border-radius:999px;
+    background:#e7eef6;
+    overflow:hidden;
+}
+
+.shortlist-score-fill{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg,#13b5b1,#1769aa);
+}
+
+/* Botón invisible exactamente encima de SU tarjeta */
+[class*="st-key-shortlist_card_"] [class*="st-key-open_shortlist_detail_"]{
+    position:absolute!important;
+    inset:0!important;
+    z-index:30!important;
+    width:100%!important;
+    height:100%!important;
+    margin:0!important;
+    padding:0!important;
+}
+
+[class*="st-key-shortlist_card_"] [class*="st-key-open_shortlist_detail_"] div[data-testid="stButton"]{
+    width:100%!important;
+    height:100%!important;
+    margin:0!important;
+    padding:0!important;
+}
+
+[class*="st-key-shortlist_card_"] [class*="st-key-open_shortlist_detail_"] button{
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    opacity:0!important;
+    cursor:pointer!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+}
+
+@media(max-width:1200px){
+    .shortlist-card{
+        grid-template-columns:34px minmax(170px,1.45fr) 72px 92px 86px 76px minmax(150px,.9fr);
+        gap:.45rem;
+        padding:.55rem .58rem;
+    }
+    .shortlist-label{font-size:.55rem}
+    .shortlist-value,.shortlist-score-top b{font-size:.74rem}
+    .shortlist-player-name{font-size:.86rem}
+}
+
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -443,6 +622,10 @@ def keyed_container(border: bool = False, key: str | None = None):
 def set_pending_position(pos: str) -> None:
     st.session_state["pending_merged_pos"] = str(pos)
 
+
+def set_selected_candidate_idx(idx: int) -> None:
+    st.session_state["selected_candidate_idx"] = int(idx)
+
 def render_position_pitch(position_options: list[str], selected_position: str) -> str:
     available_positions = [str(pos) for pos in position_options]
     available_set = set(available_positions)
@@ -474,32 +657,69 @@ def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
     if display_df.empty:
         st.info("No hay candidatos disponibles para mostrar.")
         return []
-    try:
-        table_event = st.dataframe(
-            display_df,
-            use_container_width=True,
-            hide_index=True,
-            height=212,
-            on_select="rerun",
-            selection_mode="single-row",
-            column_config={
-                "Jugador": st.column_config.TextColumn("Jugador", width="medium"),
-                "Club": st.column_config.TextColumn("Club", width="medium"),
-                "Grupo posicional": st.column_config.TextColumn("Grupo posicional", width="small"),
-                "Valor de mercado": st.column_config.TextColumn("Valor de mercado", width="small"),
-                "Pie": st.column_config.TextColumn("Pie", width="small"),
-                "Altura": st.column_config.TextColumn("Altura", width="small"),
-                "Score final": st.column_config.ProgressColumn("Score final", min_value=0.0, max_value=100.0, format="%.1f", width="medium"),
-            },
-            key="shortlist_table",
+
+    selected_idx = st.session_state.get("selected_candidate_idx", None)
+    clicked_rows: list[int] = []
+
+    for idx, row in display_df.reset_index(drop=True).iterrows():
+        player = html.escape(str(row.get("Jugador", "Jugador no disponible")))
+        club = html.escape(str(row.get("Club", "Club no disponible")))
+        group = html.escape(str(row.get("Grupo posicional", "")))
+        value = html.escape(str(row.get("Valor de mercado", "")))
+        foot = html.escape(str(row.get("Pie", "")))
+        height = html.escape(str(row.get("Altura", "")))
+
+        score_value = pd.to_numeric(pd.Series([row.get("Score final", None)]), errors="coerce").iloc[0]
+        score_text = "NA" if pd.isna(score_value) else f"{float(score_value):.1f}"
+        score_width = 0 if pd.isna(score_value) else max(0, min(100, float(score_value)))
+
+        selected_class = " selected" if isinstance(selected_idx, int) and selected_idx == idx else ""
+
+        card_html = (
+            f'<div class="shortlist-card{selected_class}">'
+            f'<div class="shortlist-rank">{idx + 1}</div>'
+            f'<div class="shortlist-player">'
+            f'<div class="shortlist-player-name">{player}</div>'
+            f'<div class="shortlist-player-sub">{club}</div>'
+            f'</div>'
+            f'<div class="shortlist-field">'
+            f'<div class="shortlist-label">Grupo</div>'
+            f'<div class="shortlist-pill">{group}</div>'
+            f'</div>'
+            f'<div class="shortlist-field">'
+            f'<div class="shortlist-label">Valor</div>'
+            f'<div class="shortlist-value">{value}</div>'
+            f'</div>'
+            f'<div class="shortlist-field">'
+            f'<div class="shortlist-label">Pie</div>'
+            f'<div class="shortlist-value">{foot}</div>'
+            f'</div>'
+            f'<div class="shortlist-field">'
+            f'<div class="shortlist-label">Altura</div>'
+            f'<div class="shortlist-value">{height}</div>'
+            f'</div>'
+            f'<div class="shortlist-score">'
+            f'<div class="shortlist-score-top"><span>Score final</span><b>{score_text}</b></div>'
+            f'<div class="shortlist-score-track">'
+            f'<div class="shortlist-score-fill" style="width:{score_width:.1f}%"></div>'
+            f'</div>'
+            f'</div>'
+            f'</div>'
         )
-    except TypeError:
-        st.dataframe(display_df, use_container_width=True, hide_index=True, height=224)
-        st.caption("Actualiza Streamlit para seleccionar filas directamente desde la tabla.")
-        return []
-    selection = table_event.get("selection", {}) if isinstance(table_event, dict) else {}
-    rows = selection.get("rows", []) if isinstance(selection, dict) else []
-    return list(rows) if rows is not None else []
+
+        with keyed_container(border=False, key=f"shortlist_card_{idx}"):
+            st.markdown(card_html, unsafe_allow_html=True)
+
+            if st.button(
+                f"Ver detalle de {player}",
+                key=f"open_shortlist_detail_{idx}",
+                on_click=set_selected_candidate_idx,
+                args=(idx,),
+                use_container_width=True,
+            ):
+                clicked_rows = [idx]
+
+    return clicked_rows
 
 def compute_ranking(proto_df, players_df, team_name, merged_pos, exclude_same_team, preferred_foot, min_height, max_value_target):
     raw_df, proto_row, valid_cols = engine.compute_for_target_merged(
@@ -738,12 +958,14 @@ with height_col:
 metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4, gap="small")
 avg_top = pd.to_numeric(shortlist_df["final_scouting_score_0_100"], errors="coerce").mean()
 
-
 section_left, section_right = st.columns([1, .24], gap="small")
+
 with section_left:
     st.markdown("""
     <div class="section-head"><div class="sf-panel-icon">☷</div><div><div class="section-title">Shortlist recomendada</div>
-    <div class="section-subtitle">Haz clic en cualquier fila para ver el detalle táctico del jugador.</div></div></div>
+    <div class="section-subtitle">Haz clic en cualquier candidato para ver el detalle táctico del jugador.
+    
+    </div></div></div>
     """, unsafe_allow_html=True)
 with section_right:
     if not shortlist_display.empty:
@@ -774,6 +996,7 @@ else:
         selected_player = str(shortlist_df.iloc[selected_display_row][player_col])
         selected_row = shortlist_df.iloc[selected_display_row]
         render_player_detail_dialog(selected_player, selected_row, raw_df, proto_row, valid_cols)
+        st.session_state["selected_candidate_idx"] = None
         if not hasattr(st, "dialog"):
             st.caption("Tu versión de Streamlit no soporta ventanas emergentes; por eso el detalle se muestra debajo de la tabla.")
 

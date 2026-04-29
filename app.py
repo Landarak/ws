@@ -564,7 +564,42 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
 @media(max-width:1000px){
     .start-guide-steps{grid-template-columns:1fr;}
 }
+/* ===== Compactar espacio vertical superior ===== */
 
+/* Quita aire arriba de toda la app */
+[data-testid="stMainBlockContainer"],
+.block-container,
+.main .block-container{
+    padding-top:0!important;
+    margin-top:0!important;
+}
+
+/* Acerca el título ScoutFit a los paneles */
+.sf-header{
+    margin-top:-1.2rem!important;
+    margin-bottom:-.10rem!important;
+}
+
+/* Reduce separación entre bloques principales */
+.main .block-container [data-testid="stVerticalBlock"]{
+    gap:.12rem!important;
+}
+
+/* Acerca el bloque de resultados/guía a la fila de búsqueda */
+.start-guide{
+    margin-top:.25rem!important;
+}
+
+.result-banner{
+    margin-top:.15rem!important;
+}
+
+/* Acerca las tarjetas de candidato a la parte superior */
+.candidate-card,
+.score-card,
+.stat-card{
+    margin-top:0!important;
+}
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)

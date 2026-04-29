@@ -1,13 +1,17 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+import base64
 import hashlib
 import html
+from pathlib import Path
 from typing import Any
 import pandas as pd
 import streamlit as st
 
 from engine import TacticalCompatibilityEngine
+from urllib.parse import quote
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="ScoutFit | Compatibilidad táctica",
@@ -604,6 +608,536 @@ div[data-testid="stDataFrame"]{max-height:320px!important;}
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
+
+# ======================================================
+# IDENTIDAD VISUAL SCOUTFIT
+# Paleta basada en el logo: azul marino, fucsia y dorado.
+# ======================================================
+BRAND_CSS = """
+<style>
+:root{
+    --navy:#062B4F!important;
+    --navy-2:#021B33!important;
+    --pink:#F00655!important;
+    --pink-dark:#C90046!important;
+    --gold:#C9A143!important;
+    --gold-dark:#9A741B!important;
+    --gold-soft:#F4E6B4!important;
+    --muted:#687386!important;
+    --border:rgba(6,43,79,.14)!important;
+    --shadow:0 10px 26px rgba(6,43,79,.08)!important;
+}
+
+.stApp{
+    background:
+        radial-gradient(circle at 4% 12%, rgba(240,6,85,.10) 0, rgba(240,6,85,0) 26%),
+        radial-gradient(circle at 92% 8%, rgba(201,161,67,.16) 0, rgba(201,161,67,0) 22%),
+        radial-gradient(circle at 100% 82%, rgba(6,43,79,.08) 0, rgba(6,43,79,0) 28%),
+        linear-gradient(180deg,#ffffff 0%,#f7f8fb 54%,#ffffff 100%)!important;
+}
+
+.stApp:before{
+    content:"";
+    position:fixed;
+    right:-145px;
+    top:70px;
+    width:390px;
+    height:390px;
+    border-radius:999px;
+    border:30px solid rgba(240,6,85,.065);
+    pointer-events:none;
+    z-index:0;
+}
+
+.stApp:after{
+    content:"";
+    position:fixed;
+    left:-155px;
+    bottom:-145px;
+    width:360px;
+    height:360px;
+    border-radius:999px;
+    border:28px solid rgba(201,161,67,.085);
+    pointer-events:none;
+    z-index:0;
+}
+
+[data-testid="stMainBlockContainer"],
+.block-container,
+.main .block-container{
+    position:relative!important;
+    z-index:1!important;
+}
+
+h1,h2,h3,h4,h5,h6,p,label,span,div{color:var(--navy)}
+
+.sf-header{
+    display:flex!important;
+    align-items:center!important;
+    gap:.72rem!important;
+    margin-top:-1.05rem!important;
+    margin-bottom:.02rem!important;
+    padding:.10rem .05rem .20rem .05rem!important;
+}
+
+.sf-logo-img-wrap{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    border-radius:15px!important;
+    display:grid!important;
+    place-items:center!important;
+    overflow:hidden!important;
+    background:linear-gradient(135deg,#ffffff,#f7f8fb)!important;
+    border:1px solid rgba(201,161,67,.48)!important;
+    box-shadow:0 10px 22px rgba(6,43,79,.12)!important;
+}
+
+.sf-logo-img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    object-position:center!important;
+    transform:scale(1.22)!important;
+}
+
+.sf-logo-fallback{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    border-radius:15px!important;
+    display:grid!important;
+    place-items:center!important;
+    background:
+        radial-gradient(circle at 72% 22%, rgba(201,161,67,.95) 0 6px, transparent 7px),
+        linear-gradient(135deg,var(--navy-2),var(--navy))!important;
+    border:1px solid rgba(201,161,67,.54)!important;
+    box-shadow:0 10px 22px rgba(6,43,79,.14)!important;
+    color:#fff!important;
+    font-weight:950!important;
+    letter-spacing:-.08em!important;
+}
+
+.sf-title{
+    margin:0!important;
+    line-height:1!important;
+    font-size:clamp(1.52rem,2vw,2.10rem)!important;
+    font-weight:950!important;
+    letter-spacing:-.052em!important;
+}
+
+.sf-title-navy{color:var(--navy)!important;}
+.sf-title-pink{color:var(--pink)!important;}
+
+.sf-subtitle{
+    margin-top:.03rem!important;
+    color:var(--muted)!important;
+    font-size:.79rem!important;
+    font-weight:620!important;
+}
+
+.sf-panel-icon,
+.start-guide-icon,
+.metric-strip-icon{
+    background:rgba(201,161,67,.14)!important;
+    border:1px solid rgba(201,161,67,.34)!important;
+    color:var(--gold-dark)!important;
+}
+
+.search-note,
+.start-guide-callout{
+    border-color:rgba(201,161,67,.30)!important;
+    background:rgba(201,161,67,.10)!important;
+    color:#6f5213!important;
+}
+
+div[data-testid="stButton"]>button{
+    border-radius:13px!important;
+    font-weight:900!important;
+}
+
+div[data-testid="stButton"]>button[kind="primary"]{
+    background:linear-gradient(135deg,var(--pink),var(--pink-dark))!important;
+    border:0!important;
+    color:#fff!important;
+    box-shadow:0 10px 22px rgba(240,6,85,.23)!important;
+}
+
+div[data-testid="stButton"]>button[kind="primary"]:hover{
+    filter:brightness(1.03)!important;
+    box-shadow:0 12px 26px rgba(240,6,85,.28)!important;
+}
+
+.stDownloadButton button{
+    border-color:rgba(201,161,67,.55)!important;
+    color:var(--gold-dark)!important;
+    font-weight:900!important;
+}
+
+.st-key-config_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-pitch_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-pref_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-config_panel[data-testid="stVerticalBlockBorderWrapper"],
+.st-key-pitch_panel[data-testid="stVerticalBlockBorderWrapper"],
+.st-key-pref_panel[data-testid="stVerticalBlockBorderWrapper"]{
+    border:1px solid rgba(6,43,79,.12)!important;
+    box-shadow:0 10px 26px rgba(6,43,79,.06)!important;
+    background:rgba(255,255,255,.96)!important;
+}
+
+.st-key-pitch_abs_area{
+    border:3px solid rgba(255,255,255,.96)!important;
+    background:
+        linear-gradient(90deg, transparent 49.72%, rgba(255,255,255,.86) 49.92%, rgba(255,255,255,.86) 50.08%, transparent 50.28%),
+        radial-gradient(circle at 50% 50%, transparent 0 39px, rgba(255,255,255,.75) 40px 42px, transparent 43px),
+        radial-gradient(circle at 16% 24%, rgba(201,161,67,.18), transparent 24%),
+        radial-gradient(circle at 84% 76%, rgba(240,6,85,.18), transparent 26%),
+        linear-gradient(135deg,var(--navy-2),var(--navy))!important;
+    box-shadow:inset 0 0 30px rgba(0,0,0,.20),0 10px 24px rgba(6,43,79,.18)!important;
+}
+
+.st-key-pitch_abs_area [class*="st-key-pitchpos_"] button{
+    background:rgba(255,255,255,.97)!important;
+    color:var(--navy)!important;
+    border:1px solid rgba(201,161,67,.46)!important;
+    box-shadow:0 7px 15px rgba(6,43,79,.18)!important;
+}
+
+.st-key-pitch_abs_area [class*="st-key-pitchpos_"] button:hover{
+    border-color:var(--pink)!important;
+    color:var(--pink)!important;
+    box-shadow:0 0 0 3px rgba(240,6,85,.12),0 8px 18px rgba(6,43,79,.20)!important;
+}
+
+.st-key-pitch_abs_area [class*="st-key-pitchpos_"] button[kind="primary"],
+.st-key-pitch_abs_area [class*="st-key-pitchpos_"] button[data-testid="baseButton-primary"]{
+    background:linear-gradient(135deg,var(--pink),var(--pink-dark))!important;
+    color:#fff!important;
+    border-color:rgba(255,255,255,.95)!important;
+    box-shadow:0 0 0 3px rgba(240,6,85,.18),0 0 16px rgba(240,6,85,.48)!important;
+}
+
+.candidate-card,
+.score-card,
+.stat-card,
+.metric-strip-card{
+    border-radius:18px!important;
+    border:1px solid rgba(6,43,79,.12)!important;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)!important;
+    box-shadow:0 10px 26px rgba(6,43,79,.07)!important;
+}
+
+.avatar-placeholder{
+    background:
+        radial-gradient(circle at 75% 24%, rgba(201,161,67,.90) 0 5px, transparent 6px),
+        linear-gradient(135deg,var(--navy-2),var(--navy))!important;
+    border:1px solid rgba(201,161,67,.42)!important;
+    color:#fff!important;
+}
+
+.position-pill,
+.shortlist-pill{
+    border:1px solid rgba(240,6,85,.28)!important;
+    background:rgba(240,6,85,.07)!important;
+    color:var(--pink-dark)!important;
+}
+
+.big-score{
+    color:var(--pink)!important;
+}
+
+.score-status,
+.stat-value.accent{
+    color:var(--gold-dark)!important;
+}
+
+.result-banner{
+    border:1px solid rgba(201,161,67,.26)!important;
+    background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(244,230,180,.20))!important;
+    box-shadow:0 8px 20px rgba(6,43,79,.055)!important;
+}
+
+.target-icon{
+    background:rgba(201,161,67,.14)!important;
+    border:1px solid rgba(201,161,67,.35)!important;
+    color:var(--gold-dark)!important;
+}
+
+.result-text b{
+    color:var(--pink)!important;
+}
+
+.shortlist-card{
+    border:1px solid rgba(6,43,79,.12)!important;
+    background:rgba(255,255,255,.97)!important;
+    box-shadow:0 8px 20px rgba(6,43,79,.05)!important;
+}
+
+[class*="st-key-shortlist_card_"]:hover .shortlist-card{
+    border-color:rgba(240,6,85,.30)!important;
+    background:linear-gradient(180deg,#ffffff 0%,#fbf7fa 100%)!important;
+    box-shadow:0 12px 26px rgba(6,43,79,.08)!important;
+}
+
+.shortlist-card.selected{
+    border-color:rgba(240,6,85,.58)!important;
+    background:linear-gradient(135deg,rgba(240,6,85,.06),rgba(255,255,255,.98))!important;
+    box-shadow:0 0 0 3px rgba(240,6,85,.10),0 10px 24px rgba(6,43,79,.07)!important;
+}
+
+.shortlist-rank{
+    background:rgba(201,161,67,.16)!important;
+    color:var(--gold-dark)!important;
+}
+
+.shortlist-score-fill{
+    background:linear-gradient(90deg,var(--pink),var(--gold))!important;
+}
+
+.start-guide{
+    border:1px solid rgba(201,161,67,.32)!important;
+    background:
+        radial-gradient(circle at 8% 16%, rgba(240,6,85,.13), transparent 28%),
+        radial-gradient(circle at 92% 20%, rgba(201,161,67,.16), transparent 24%),
+        linear-gradient(135deg,#ffffff,#f8fafc)!important;
+    box-shadow:0 12px 28px rgba(6,43,79,.07)!important;
+}
+
+.start-guide-chip b,
+.section-title,
+.candidate-name,
+.shortlist-player-name{
+    color:var(--navy)!important;
+}
+
+.start-guide-step-num{
+    background:rgba(240,6,85,.10)!important;
+    color:var(--pink-dark)!important;
+}
+
+div[data-testid="stDataFrame"]{
+    border:1px solid rgba(6,43,79,.12)!important;
+}
+
+.footer-note{
+    color:var(--muted)!important;
+}
+</style>
+"""
+st.markdown(BRAND_CSS, unsafe_allow_html=True)
+
+ENHANCED_THEME_CSS = """
+<style>
+:root{--app-bg-1:#07192b!important;--app-bg-2:#0a2343!important;--app-bg-3:#11192a!important;}
+.stApp{
+    background:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'><g fill='none' stroke='%23ffffff' stroke-opacity='.055' stroke-width='2'><rect x='38' y='95' width='244' height='130' rx='10'/><line x1='160' y1='95' x2='160' y2='225'/><circle cx='160' cy='160' r='26'/><path d='M38 125 h32 v70 h-32'/><path d='M282 125 h-32 v70 h32'/><path d='M26 140 h22 v40 h-22'/><path d='M294 140 h-22 v40 h22'/><path d='M72 60 L120 104 L170 82 L210 130 L258 108'/><circle cx='72' cy='60' r='4' fill='%23ffffff' fill-opacity='.07'/><circle cx='120' cy='104' r='4' fill='%23ffffff' fill-opacity='.07'/><circle cx='170' cy='82' r='4' fill='%23ffffff' fill-opacity='.07'/><circle cx='210' cy='130' r='4' fill='%23ffffff' fill-opacity='.07'/><circle cx='258' cy='108' r='4' fill='%23ffffff' fill-opacity='.07'/></g></svg>"),
+        radial-gradient(circle at 8% 14%, rgba(240,6,85,.14) 0, rgba(240,6,85,0) 22%),
+        radial-gradient(circle at 88% 8%, rgba(201,161,67,.15) 0, rgba(201,161,67,0) 20%),
+        radial-gradient(circle at 90% 88%, rgba(255,255,255,.04) 0, rgba(255,255,255,0) 18%),
+        linear-gradient(135deg,var(--app-bg-1) 0%, var(--app-bg-2) 52%, var(--app-bg-3) 100%)!important;
+    background-size:320px 320px, auto, auto, auto, auto!important;
+    background-attachment:fixed!important;
+}
+.stApp:before{
+    border-color:rgba(240,6,85,.10)!important;
+    width:420px!important;
+    height:420px!important;
+    right:-170px!important;
+    top:110px!important;
+}
+.stApp:after{
+    border-color:rgba(201,161,67,.12)!important;
+}
+.st-key-config_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-pitch_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-pref_panel [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-config_panel[data-testid="stVerticalBlockBorderWrapper"],
+.st-key-pitch_panel[data-testid="stVerticalBlockBorderWrapper"],
+.st-key-pref_panel[data-testid="stVerticalBlockBorderWrapper"],
+.candidate-card,.score-card,.stat-card,.metric-strip-card,.shortlist-card,.start-guide{
+    background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(248,250,252,.95))!important;
+    backdrop-filter:blur(8px)!important;
+}
+.section-title,.result-title,.sf-panel-title,.candidate-name,.shortlist-player-name,.stat-value,.metric-strip-value{color:var(--navy)!important;}
+.footer-note,.section-subtitle,.result-text,.candidate-meta,.sf-subtitle,.mini-label,.shortlist-player-sub,.shortlist-label,.score-label,.stat-label{color:#d9dfec!important;}
+.candidate-card .mini-label,.score-card .score-label,.stat-card .stat-label,.shortlist-label,.candidate-meta,.shortlist-player-sub,.section-subtitle,.result-text,.footer-note,.metric-strip-label{color:var(--muted)!important;}
+.prototype-context-card{
+    border-radius:18px;
+    border:1px solid rgba(201,161,67,.26);
+    background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(244,230,180,.12));
+    box-shadow:0 10px 26px rgba(6,43,79,.08);
+    padding:.84rem .95rem;
+    margin:.10rem 0 .45rem 0;
+}
+.prototype-context-title{font-size:.98rem;font-weight:950;color:var(--navy);margin-bottom:.18rem;}
+.prototype-context-text{font-size:.82rem;line-height:1.35;color:var(--muted);}
+.prototype-chip-row{display:flex;flex-wrap:wrap;gap:.42rem;margin-top:.55rem;}
+.prototype-chip{display:inline-flex;align-items:center;gap:.34rem;padding:.34rem .52rem;border-radius:999px;background:rgba(255,255,255,.90);border:1px solid rgba(6,43,79,.10);font-size:.74rem;font-weight:850;color:var(--navy);}
+.prototype-chip b{color:var(--pink);font-weight:950;}
+.detail-hero{border-radius:18px;border:1px solid rgba(201,161,67,.26);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(244,230,180,.14));box-shadow:0 10px 26px rgba(6,43,79,.08);padding:.92rem 1rem;margin:.10rem 0 .6rem 0;}
+.detail-hero-top{display:flex;align-items:center;gap:.78rem;justify-content:space-between;flex-wrap:wrap;}
+.detail-identity{display:flex;align-items:center;gap:.72rem;}
+.detail-avatar{width:58px;height:58px;border-radius:999px;display:grid;place-items:center;background:linear-gradient(135deg,var(--navy-2),var(--navy));color:#fff;border:1px solid rgba(201,161,67,.44);font-weight:950;font-size:1.08rem;box-shadow:0 8px 18px rgba(6,43,79,.18);}
+.detail-name{font-size:1.22rem;font-weight:950;color:var(--navy);line-height:1.02;}
+.detail-sub{font-size:.84rem;color:var(--muted);margin-top:.14rem;}
+.detail-badges{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:flex-end;}
+.detail-badge{display:inline-flex;align-items:center;gap:.28rem;padding:.36rem .56rem;border-radius:999px;font-size:.75rem;font-weight:900;border:1px solid rgba(6,43,79,.10);background:rgba(255,255,255,.92);color:var(--navy);}
+.detail-badge.strong{border-color:rgba(240,6,85,.22);background:rgba(240,6,85,.08);color:var(--pink-dark);}
+.detail-badge.gold{border-color:rgba(201,161,67,.28);background:rgba(201,161,67,.12);color:var(--gold-dark);}
+.detail-hero-summary{margin-top:.65rem;font-size:.86rem;color:var(--muted);line-height:1.36;}
+.detail-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem;margin:.15rem 0 .35rem 0;}
+.detail-kpi{border-radius:16px;border:1px solid rgba(6,43,79,.10);background:rgba(255,255,255,.92);padding:.62rem .64rem;box-shadow:0 8px 18px rgba(6,43,79,.05);}
+.detail-kpi-label{font-size:.68rem;font-weight:850;line-height:1.1;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);}
+.detail-kpi-value{font-size:1.18rem;font-weight:950;color:var(--navy);margin-top:.18rem;line-height:1.05;}
+.detail-kpi-sub{font-size:.76rem;color:var(--muted);margin-top:.18rem;line-height:1.16;}
+.detail-diagnosis{border-radius:16px;border:1px solid rgba(201,161,67,.24);background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(244,230,180,.16));padding:.78rem .82rem;box-shadow:0 8px 20px rgba(6,43,79,.05);}
+.detail-section-title{font-size:.90rem;font-weight:950;color:var(--navy);margin-bottom:.2rem;}
+.detail-section-text{font-size:.83rem;color:var(--muted);line-height:1.38;}
+.detail-block-stack{display:flex;flex-direction:column;gap:.48rem;margin-top:.12rem;}
+.detail-block-card{border-radius:16px;border:1px solid rgba(6,43,79,.10);background:rgba(255,255,255,.95);padding:.72rem .78rem;box-shadow:0 8px 18px rgba(6,43,79,.05);}
+.detail-block-card.positive{border-color:rgba(201,161,67,.30);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(244,230,180,.14));}
+.detail-block-card.warning{border-color:rgba(240,6,85,.22);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(240,6,85,.06));}
+.detail-block-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;}
+.detail-block-name{font-size:.90rem;font-weight:950;color:var(--navy);line-height:1.1;}
+.detail-block-reading{font-size:.75rem;color:var(--muted);margin-top:.12rem;line-height:1.18;}
+.detail-block-score{font-size:1.02rem;font-weight:950;color:var(--navy);}
+.detail-progress{height:8px;border-radius:999px;background:#e7eef6;overflow:hidden;margin-top:.52rem;}
+.detail-progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--pink),var(--gold));}
+.detail-pill{display:inline-flex;align-items:center;padding:.28rem .45rem;border-radius:999px;font-size:.70rem;font-weight:900;}
+.detail-pill.ok{background:rgba(201,161,67,.14);color:var(--gold-dark);}
+.detail-pill.review{background:rgba(240,6,85,.10);color:var(--pink-dark);}
+.preference-card{border-radius:16px;border:1px solid rgba(6,43,79,.10);background:rgba(255,255,255,.94);padding:.75rem .82rem;box-shadow:0 8px 18px rgba(6,43,79,.05);}
+.preference-impact-number{font-size:1.55rem;font-weight:950;color:var(--pink);line-height:1;}
+.preference-impact-caption{font-size:.77rem;color:var(--muted);margin-top:.15rem;}
+.preference-item{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;padding:.46rem 0;border-bottom:1px solid rgba(6,43,79,.08);}
+.preference-item:last-child{border-bottom:none;padding-bottom:0;}
+.preference-name{font-size:.80rem;font-weight:900;color:var(--navy);}
+.preference-target{font-size:.73rem;color:var(--muted);margin-top:.08rem;}
+.preference-value{font-size:.78rem;font-weight:850;color:var(--navy);text-align:right;}
+.preference-status{display:inline-flex;align-items:center;padding:.24rem .42rem;border-radius:999px;font-size:.68rem;font-weight:900;white-space:nowrap;}
+.preference-status.ok{background:rgba(201,161,67,.15);color:var(--gold-dark);}
+.preference-status.bad{background:rgba(240,6,85,.10);color:var(--pink-dark);}
+.preference-status.neutral{background:rgba(6,43,79,.08);color:var(--navy);}
+@media(max-width:1100px){.detail-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+</style>
+"""
+st.markdown(ENHANCED_THEME_CSS, unsafe_allow_html=True)
+CONTRAST_FIX_CSS = """
+<style>
+/* ===== Corrección de contraste sobre fondo oscuro ===== */
+
+/* Título principal: Scout en blanco, Fit en rosado */
+.sf-title-navy{
+    color:#ffffff!important;
+}
+
+.sf-title-pink{
+    color:var(--pink)!important;
+}
+
+.sf-subtitle{
+    color:rgba(255,255,255,.88)!important;
+}
+
+/* Títulos y subtítulos de paneles superiores */
+.st-key-config_panel .sf-panel-title,
+.st-key-pref_panel .sf-panel-title,
+.st-key-pitch_panel .sf-panel-title{
+    color:#ffffff!important;
+}
+
+.st-key-config_panel .sf-panel-subtitle,
+.st-key-pref_panel .sf-panel-subtitle,
+.st-key-pitch_panel .sf-panel-subtitle{
+    color:rgba(255,255,255,.72)!important;
+}
+
+/* Labels de parámetros: Club, formación, pie, altura, presupuesto */
+.st-key-config_panel [data-testid="stWidgetLabel"],
+.st-key-pref_panel [data-testid="stWidgetLabel"],
+.st-key-config_panel [data-testid="stWidgetLabel"] p,
+.st-key-pref_panel [data-testid="stWidgetLabel"] p,
+.st-key-config_panel label,
+.st-key-pref_panel label,
+.st-key-config_panel label p,
+.st-key-pref_panel label p{
+    color:rgba(255,255,255,.86)!important;
+    font-weight:800!important;
+}
+
+/* Texto de checkboxes: excluir jugadores / aplicar preferencias */
+.st-key-config_panel .stCheckbox,
+.st-key-pref_panel .stCheckbox,
+.st-key-config_panel .stCheckbox label,
+.st-key-pref_panel .stCheckbox label,
+.st-key-config_panel .stCheckbox label p,
+.st-key-pref_panel .stCheckbox label p,
+.st-key-config_panel .stCheckbox span,
+.st-key-pref_panel .stCheckbox span{
+    color:rgba(255,255,255,.86)!important;
+}
+
+/* Textos dentro de botones principales */
+.st-key-config_panel div[data-testid="stButton"] button,
+.st-key-config_panel div[data-testid="stButton"] button p,
+.st-key-config_panel div[data-testid="stButton"] button span{
+    color:#ffffff!important;
+}
+
+/* Título de la shortlist sobre fondo oscuro */
+.section-title{
+    color:#ffffff!important;
+}
+
+.section-subtitle{
+    color:rgba(255,255,255,.72)!important;
+}
+
+/* Botón de descarga */
+.stDownloadButton button,
+.stDownloadButton button p,
+.stDownloadButton button span{
+    color:var(--navy)!important;
+}
+
+/* Footer sobre fondo oscuro */
+.footer-note{
+    color:rgba(255,255,255,.62)!important;
+}
+</style>
+"""
+st.markdown(CONTRAST_FIX_CSS, unsafe_allow_html=True)
+def load_logo_data_uri(path: str | None = None) -> str:
+    """Carga el logo local si existe. Si no existe, usa el logo embebido dentro de la app."""
+    candidate_paths = []
+    if path:
+        candidate_paths.append(path)
+    candidate_paths.extend([
+        "assets/scoutfit_logo.png",
+        "assets/scoutfit_logo.jpg",
+        "assets/scoutfit_logo.webp",
+        "scoutfit_logo.png",
+        "scoutfit_logo.jpg",
+        "scoutfit_logo.webp",
+        "logo.png",
+        "logo.jpg",
+        "logo.webp",
+    ])
+
+    for candidate in candidate_paths:
+        logo_path = Path(candidate)
+        if not logo_path.exists():
+            continue
+        mime = "image/png"
+        if logo_path.suffix.lower() in {".jpg", ".jpeg"}:
+            mime = "image/jpeg"
+        elif logo_path.suffix.lower() == ".webp":
+            mime = "image/webp"
+        encoded = base64.b64encode(logo_path.read_bytes()).decode("utf-8")
+        return f"data:{mime};base64,{encoded}"
+    return EMBEDDED_LOGO_DATA_URI or ""
+
 # Placeholder global para inyectar coordenadas dinámicas sin meter un elemento invisible dentro del panel de la cancha.
 pitch_coord_css_anchor = st.empty()
 
@@ -1070,6 +1604,150 @@ def block_display(block_df: pd.DataFrame) -> pd.DataFrame:
     out["Lectura"] = out["prototype_vs_player"].replace({"por encima":"Por encima del prototipo","por debajo":"Por debajo del prototipo","alineado":"Alineado con el prototipo"})
     return out[["Área","Ajuste","Lectura"]]
 
+
+def tactical_diagnosis_text(readable_blocks: pd.DataFrame) -> str:
+    if readable_blocks.empty:
+        return "No fue posible construir un diagnóstico táctico para este jugador con la información disponible."
+    ranked = readable_blocks.copy()
+    ranked["Ajuste"] = pd.to_numeric(ranked["Ajuste"], errors="coerce")
+    ranked = ranked.dropna(subset=["Ajuste"]).sort_values("Ajuste", ascending=False)
+    if ranked.empty:
+        return "No fue posible construir un diagnóstico táctico para este jugador con la información disponible."
+    top_areas = ranked.head(2)["Área"].tolist()
+    low_areas = ranked.sort_values("Ajuste", ascending=True).head(2)["Área"].tolist()
+    mean_score = ranked["Ajuste"].mean()
+    if mean_score >= 82:
+        overall = "El ajuste global frente al prototipo del club es alto"
+    elif mean_score >= 72:
+        overall = "El ajuste global frente al prototipo del club es competitivo"
+    else:
+        overall = "El ajuste global frente al prototipo del club requiere revisión"
+    strengths = ", ".join(top_areas) if top_areas else "las áreas principales"
+    concerns = ", ".join(low_areas) if low_areas else "algunas áreas secundarias"
+    return (
+        f"{overall}. El jugador destaca especialmente en {strengths}. "
+        f"Las mayores diferencias con el perfil buscado aparecen en {concerns}. "
+        f"Esto sugiere que su encaje puede ser más inmediato en las fases donde domina sus fortalezas, "
+        f"mientras que las áreas más débiles deberían revisarse antes de una decisión final."
+    )
+
+
+def get_score_bucket(score: float | None) -> str:
+    if score is None:
+        return "Sin calificación"
+    if score >= 85:
+        return "Ajuste élite"
+    if score >= 75:
+        return "Ajuste alto"
+    if score >= 65:
+        return "Ajuste medio"
+    return "Ajuste en revisión"
+
+
+def infer_decision_profile(final_score: float | None, impact_delta: float | None, preference_rows: list[dict[str, str]]) -> str:
+    fails = sum(1 for row in preference_rows if row.get("status_key") == "bad")
+    if final_score is None:
+        return "Perfil no concluyente"
+    if final_score >= 85 and fails == 0:
+        return "Prioridad alta"
+    if final_score >= 75 and fails <= 1:
+        return "Seguimiento recomendado"
+    if final_score >= 65:
+        return "Apuesta contextual"
+    return "Revisión profunda"
+
+
+def build_preference_rows(selected_row: pd.Series) -> tuple[list[dict[str, str]], float | None]:
+    rows: list[dict[str, str]] = []
+    preferred_foot = st.session_state.get("applied_preferred_foot")
+    min_height = st.session_state.get("applied_min_height")
+    max_value_target = st.session_state.get("applied_max_value_target")
+
+    selected_score = safe_score(selected_row.get("final_scouting_score_0_100"))
+    base_score = safe_score(selected_row.get(SCORE_METHOD))
+    impact_delta = None
+    if selected_score is not None and base_score is not None:
+        impact_delta = round(selected_score - base_score, 1)
+
+    player_foot_raw = str(selected_row.get("foot", "")).strip().lower()
+    player_foot_text = format_foot(selected_row.get("foot", pd.NA))
+    if preferred_foot:
+        foot_ok = player_foot_raw == str(preferred_foot).lower() or player_foot_raw == "both"
+        rows.append({
+            "criterion": "Pie dominante",
+            "target": FOOT_LABELS.get(str(preferred_foot).lower(), str(preferred_foot)),
+            "actual": player_foot_text,
+            "status": "Cumple" if foot_ok else "No cumple",
+            "status_key": "ok" if foot_ok else "bad",
+        })
+
+    actual_height = pd.to_numeric(pd.Series([selected_row.get("height", pd.NA)]), errors="coerce").iloc[0]
+    if min_height is not None:
+        height_ok = pd.notna(actual_height) and float(actual_height) >= float(min_height)
+        rows.append({
+            "criterion": "Altura mínima",
+            "target": f"{float(min_height):.2f} m",
+            "actual": format_height(actual_height),
+            "status": "Cumple" if height_ok else "No cumple",
+            "status_key": "ok" if height_ok else "bad",
+        })
+
+    actual_value = pd.to_numeric(pd.Series([selected_row.get("player_valuation", pd.NA)]), errors="coerce").iloc[0]
+    if max_value_target is not None:
+        value_ok = pd.notna(actual_value) and float(actual_value) <= float(max_value_target)
+        rows.append({
+            "criterion": "Presupuesto máximo",
+            "target": money_short(max_value_target),
+            "actual": money_short(actual_value),
+            "status": "Dentro del presupuesto" if value_ok else "Supera el presupuesto",
+            "status_key": "ok" if value_ok else "bad",
+        })
+
+    if not rows:
+        rows.append({
+            "criterion": "Preferencias de scouting",
+            "target": "No activadas",
+            "actual": "Score final igual al score táctico",
+            "status": "Sin restricciones",
+            "status_key": "neutral",
+        })
+
+    return rows, impact_delta
+
+
+def detail_metric_card(label: str, value: str, subtitle: str = "") -> str:
+    return (
+        f'<div class="detail-kpi">'
+        f'<div class="detail-kpi-label">{html.escape(label)}</div>'
+        f'<div class="detail-kpi-value">{html.escape(value)}</div>'
+        f'<div class="detail-kpi-sub">{html.escape(subtitle)}</div>'
+        f'</div>'
+    )
+
+
+def detail_block_card(area: str, score: Any, lectura: str, tone: str = "positive") -> str:
+    numeric_score = pd.to_numeric(pd.Series([score]), errors="coerce").iloc[0]
+    score_text = "NA" if pd.isna(numeric_score) else f"{float(numeric_score):.1f}"
+    width = 0 if pd.isna(numeric_score) else max(0, min(100, float(numeric_score)))
+    pill_class = "ok" if tone == "positive" else "review"
+    pill_text = "Fortaleza" if tone == "positive" else "A revisar"
+    return (
+        f'<div class="detail-block-card {tone}">'
+        f'  <div class="detail-block-head">'
+        f'    <div>'
+        f'      <div class="detail-block-name">{html.escape(str(area))}</div>'
+        f'      <div class="detail-block-reading">{html.escape(str(lectura))}</div>'
+        f'    </div>'
+        f'    <div style="text-align:right">'
+        f'      <div class="detail-block-score">{html.escape(score_text)}</div>'
+        f'      <div class="detail-pill {pill_class}">{pill_text}</div>'
+        f'    </div>'
+        f'  </div>'
+        f'  <div class="detail-progress"><div class="detail-progress-fill" style="width:{width:.1f}%"></div></div>'
+        f'</div>'
+    )
+
+
 def get_inferred_base_position(proto_df: pd.DataFrame, team_name: str, formation_final: str, ui_slot: str) -> str | None:
     preview = proto_df.copy()
     if "event_team_name" in preview.columns:
@@ -1143,29 +1821,159 @@ def render_position_pitch(
 
     if selected_position not in available_set and available_positions:
         selected_position = available_positions[0]
-        st.session_state["pending_slot"] = selected_position
 
     selected_position = str(st.session_state.get("pending_slot", selected_position))
+
     if selected_position not in available_set and available_positions:
         selected_position = available_positions[0]
-        st.session_state["pending_slot"] = selected_position
 
-    # Coordenadas dinámicas según la formación seleccionada
-    inject_pitch_coords_css(formation_final, available_positions)
+    st.session_state["pending_slot"] = selected_position
+
+    coords = FORMATION_SLOT_COORDS.get(str(formation_final), GENERIC_SLOT_COORDS)
+
+    css_lines = [
+        "<style>",
+        """
+        .st-key-pitch_abs_area{
+            position:relative!important;
+            width:96%!important;
+            height:224px!important;
+            min-height:224px!important;
+            max-height:224px!important;
+            margin:auto!important;
+            padding:0!important;
+            overflow:hidden!important;
+            border-radius:13px!important;
+            border:3px solid rgba(255,255,255,.96)!important;
+            background:
+                linear-gradient(90deg, transparent 49.72%, rgba(255,255,255,.86) 49.92%, rgba(255,255,255,.86) 50.08%, transparent 50.28%),
+                radial-gradient(circle at 50% 50%, transparent 0 39px, rgba(255,255,255,.75) 40px 42px, transparent 43px),
+                radial-gradient(circle at 16% 24%, rgba(201,161,67,.18), transparent 24%),
+                radial-gradient(circle at 84% 76%, rgba(240,6,85,.18), transparent 26%),
+                linear-gradient(135deg,var(--navy-2),var(--navy))!important;
+            box-shadow:inset 0 0 30px rgba(0,0,0,.20),0 10px 24px rgba(6,43,79,.18)!important;
+        }
+
+        .st-key-pitch_abs_area:before,
+        .st-key-pitch_abs_area:after{
+            content:"";
+            position:absolute;
+            top:24%;
+            width:14%;
+            height:52%;
+            border:2px solid rgba(255,255,255,.80);
+            z-index:0;
+            pointer-events:none;
+        }
+
+        .st-key-pitch_abs_area:before{
+            left:0;
+            border-left:0;
+        }
+
+        .st-key-pitch_abs_area:after{
+            right:0;
+            border-right:0;
+        }
+
+        .st-key-pitch_radio_selector{
+            position:absolute!important;
+            inset:0!important;
+            width:100%!important;
+            height:100%!important;
+            margin:0!important;
+            padding:0!important;
+            z-index:5!important;
+        }
+
+        .st-key-pitch_radio_selector label,
+        .st-key-pitch_radio_selector div,
+        .st-key-pitch_radio_selector p{
+            margin:0!important;
+            padding:0!important;
+        }
+
+        .st-key-pitch_radio_selector div[role="radiogroup"]{
+            position:absolute!important;
+            inset:0!important;
+            width:100%!important;
+            height:100%!important;
+        }
+
+        .st-key-pitch_radio_selector div[role="radiogroup"] > label{
+            position:absolute!important;
+            z-index:10!important;
+            transform:translate(-50%, -50%)!important;
+            min-width:44px!important;
+            height:28px!important;
+            padding:0 .48rem!important;
+            border-radius:8px!important;
+            display:inline-flex!important;
+            align-items:center!important;
+            justify-content:center!important;
+            background:rgba(255,255,255,.97)!important;
+            color:var(--navy)!important;
+            border:1px solid rgba(201,161,67,.46)!important;
+            box-shadow:0 7px 15px rgba(6,43,79,.18)!important;
+            cursor:pointer!important;
+            transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease, color .12s ease!important;
+        }
+
+        .st-key-pitch_radio_selector div[role="radiogroup"] > label:hover{
+            transform:translate(-50%, -50%) translateY(-1px)!important;
+            border-color:var(--pink)!important;
+            color:var(--pink)!important;
+            box-shadow:0 0 0 3px rgba(240,6,85,.12),0 8px 18px rgba(6,43,79,.20)!important;
+        }
+
+        .st-key-pitch_radio_selector div[role="radiogroup"] > label:has(input:checked){
+            background:linear-gradient(135deg,var(--pink),var(--pink-dark))!important;
+            color:#fff!important;
+            border-color:rgba(255,255,255,.95)!important;
+            box-shadow:0 0 0 3px rgba(240,6,85,.18),0 0 16px rgba(240,6,85,.48)!important;
+        }
+
+        .st-key-pitch_radio_selector div[role="radiogroup"] > label > div:first-child{
+            display:none!important;
+        }
+
+        .st-key-pitch_radio_selector div[role="radiogroup"] > label p{
+            font-size:.72rem!important;
+            font-weight:950!important;
+            line-height:1!important;
+            color:inherit!important;
+            white-space:nowrap!important;
+        }
+        """
+    ]
+
+    for i, pos in enumerate(available_positions, start=1):
+        x, y = coords.get(pos, GENERIC_SLOT_COORDS.get(pos, (50, 50)))
+        css_lines.append(
+            f"""
+            .st-key-pitch_radio_selector div[role="radiogroup"] > label:nth-child({i}){{
+                left:{x}%!important;
+                top:{y}%!important;
+            }}
+            """
+        )
+
+    css_lines.append("</style>")
+    st.markdown("\n".join(css_lines), unsafe_allow_html=True)
 
     with keyed_container(border=False, key="pitch_abs_area"):
-        for pos in available_positions:
-            st.button(
-                format_group_pos(pos),
-                key=f"pitchpos_{pos}",
-                on_click=set_pending_position,
-                args=(pos,),
-                type="primary" if pos == selected_position else "secondary",
-                use_container_width=False,
-                help=position_description(pos),
-            )
+        selected_slot = st.radio(
+            "Selecciona una posición",
+            options=available_positions,
+            index=available_positions.index(selected_position),
+            format_func=format_group_pos,
+            key="pitch_radio_selector",
+            label_visibility="collapsed",
+        )
 
-    return str(st.session_state.get("pending_slot", selected_position))
+    st.session_state["pending_slot"] = selected_slot
+
+    return str(selected_slot)
 
 def render_shortlist_dataframe(display_df: pd.DataFrame) -> list[int]:
     if display_df.empty:
@@ -1278,29 +2086,145 @@ def render_player_detail_content(selected_player: str, selected_row: pd.Series, 
     selected_base_score = safe_score(selected_row.get(SCORE_METHOD))
     selected_base_score_text = f"{selected_base_score:.1f}" if selected_base_score is not None else "NA"
     group_text = format_group_pos(selected_row.get("merged_pos", "Grupo no disponible"))
-    st.markdown(f"""
-    <div class="candidate-card" style="margin-bottom:.6rem;"><div class="mini-label">Candidato seleccionado</div>
-    <div class="candidate-name">{html.escape(selected_player)}</div><div class="candidate-meta">{html.escape(str(selected_row.get('event_team_name', 'Club no disponible')))} · {html.escape(group_text)}</div></div>
-    """, unsafe_allow_html=True)
-    d1, d2, d3, d4 = st.columns(4)
-    with d1: st.metric("Score final", selected_score_text)
-    with d2: st.metric("Score táctico", selected_base_score_text)
-    with d3: st.metric("Valor", money_short(selected_row.get("player_valuation", pd.NA)))
-    with d4: st.metric("Altura", format_height(selected_row.get("height", pd.NA)))
+    profile_label = infer_decision_profile(selected_score, None, [])
+
     _, block_df = engine.explain_player_vs_prototype(raw_df, proto_row, valid_cols, selected_player)
     readable_blocks = block_display(block_df)
-    if readable_blocks.empty:
-        st.info("No hay diagnóstico disponible para este jugador.")
-        return
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown("### Áreas de mayor encaje")
-        st.dataframe(readable_blocks.sort_values("Ajuste", ascending=False).head(3), use_container_width=True, hide_index=True, column_config={"Ajuste": st.column_config.ProgressColumn("Ajuste", min_value=0, max_value=100, format="%.1f")})
-    with c2:
-        st.markdown("### Áreas a revisar")
-        st.dataframe(readable_blocks.sort_values("Ajuste", ascending=True).head(3), use_container_width=True, hide_index=True, column_config={"Ajuste": st.column_config.ProgressColumn("Ajuste", min_value=0, max_value=100, format="%.1f")})
-    with st.expander("Ver todas las áreas tácticas", expanded=False):
-        st.dataframe(readable_blocks.sort_values("Ajuste", ascending=False), use_container_width=True, hide_index=True, column_config={"Ajuste": st.column_config.ProgressColumn("Ajuste", min_value=0, max_value=100, format="%.1f")})
+    diagnosis_text = tactical_diagnosis_text(readable_blocks)
+    preference_rows, impact_delta = build_preference_rows(selected_row)
+    profile_label = infer_decision_profile(selected_score, impact_delta, preference_rows)
+
+    delta_text = "Sin cambios"
+    if impact_delta is not None:
+        delta_text = f"{impact_delta:+.1f} pts"
+
+    hero_html = f"""
+    <div class="detail-hero">
+        <div class="detail-hero-top">
+            <div class="detail-identity">
+                <div class="detail-avatar">{html.escape(player_initials(selected_player))}</div>
+                <div>
+                    <div class="detail-name">{html.escape(selected_player)}</div>
+                    <div class="detail-sub">{html.escape(str(selected_row.get('event_team_name', 'Club no disponible')))} · {html.escape(group_text)}</div>
+                </div>
+            </div>
+            <div class="detail-badges">
+                <div class="detail-badge strong">Score final · {html.escape(selected_score_text)}</div>
+                <div class="detail-badge gold">{html.escape(score_status(selected_score))}</div>
+                <div class="detail-badge">{html.escape(profile_label)}</div>
+            </div>
+        </div>
+        <div class="detail-hero-summary">{html.escape(diagnosis_text)}</div>
+    </div>
+    """
+    st.markdown(hero_html, unsafe_allow_html=True)
+
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.markdown(detail_metric_card("Score táctico", selected_base_score_text, "Ajuste puro contra el prototipo"), unsafe_allow_html=True)
+    with k2:
+        st.markdown(detail_metric_card("Impacto de preferencias", delta_text, "Diferencia entre score táctico y score final"), unsafe_allow_html=True)
+    with k3:
+        st.markdown(detail_metric_card("Valor de mercado", money_short(selected_row.get("player_valuation", pd.NA)), "Referencia económica del candidato"), unsafe_allow_html=True)
+    with k4:
+        st.markdown(detail_metric_card("Altura", format_height(selected_row.get("height", pd.NA)), "Dato físico disponible en la base"), unsafe_allow_html=True)
+
+    tab1, tab2, tab3 = st.tabs(["Resumen", "Bloques tácticos", "Detalle completo"])
+
+    with tab1:
+        c1, c2 = st.columns([1.1, .95], gap="medium")
+        with c1:
+            st.markdown(
+                f"""
+                <div class="detail-diagnosis">
+                    <div class="detail-section-title">Lectura táctica</div>
+                    <div class="detail-section-text">{html.escape(diagnosis_text)}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            applied_team_name = st.session_state.get("applied_team_name", "Club objetivo")
+            applied_formation = st.session_state.get("applied_formation", "Formación")
+            applied_slot = st.session_state.get("applied_slot", "Slot")
+            inferred_role = get_inferred_base_position(proto_df, applied_team_name, applied_formation, applied_slot) if "proto_df" in globals() else applied_slot
+            proto_context_html = f"""
+            <div class="prototype-context-card" style="margin-top:.55rem;">
+                <div class="prototype-context-title">Contexto del prototipo buscado</div>
+                <div class="prototype-context-text">La comparación se realizó contra el perfil dominante del club y slot seleccionados. Esto ayuda a interpretar por qué el jugador aparece como candidato dentro del sistema objetivo.</div>
+                <div class="prototype-chip-row">
+                    <div class="prototype-chip">Club: <b>{html.escape(str(applied_team_name))}</b></div>
+                    <div class="prototype-chip">Formación: <b>{html.escape(str(applied_formation))}</b></div>
+                    <div class="prototype-chip">Slot: <b>{html.escape(format_group_pos(applied_slot))}</b></div>
+                    <div class="prototype-chip">Rol base: <b>{html.escape(position_description(inferred_role or applied_slot))}</b></div>
+                </div>
+            </div>
+            """
+            st.markdown(proto_context_html, unsafe_allow_html=True)
+
+        with c2:
+            impact_number = "0.0"
+            if impact_delta is not None:
+                impact_number = f"{impact_delta:+.1f}"
+            st.markdown(
+                f"""
+                <div class="preference-card">
+                    <div class="detail-section-title">Impacto de preferencias</div>
+                    <div class="preference-impact-number">{html.escape(impact_number)}</div>
+                    <div class="preference-impact-caption">Variación del score táctico al aplicar pie, altura y presupuesto.</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            pref_html = ['<div class="preference-card" style="margin-top:.55rem;">', '<div class="detail-section-title">Chequeo de criterios</div>']
+            for row in preference_rows:
+                pref_html.append(
+                    f'<div class="preference-item">'
+                    f'  <div>'
+                    f'    <div class="preference-name">{html.escape(str(row.get("criterion", "Criterio")))}</div>'
+                    f'    <div class="preference-target">Objetivo: {html.escape(str(row.get("target", "")))}</div>'
+                    f'  </div>'
+                    f'  <div style="text-align:right">'
+                    f'    <div class="preference-value">{html.escape(str(row.get("actual", "")))}</div>'
+                    f'    <div class="preference-status {html.escape(str(row.get("status_key", "neutral")))}">{html.escape(str(row.get("status", "")))}</div>'
+                    f'  </div>'
+                    f'</div>'
+                )
+            pref_html.append('</div>')
+            st.markdown("".join(pref_html), unsafe_allow_html=True)
+
+    with tab2:
+        if readable_blocks.empty:
+            st.info("No hay diagnóstico disponible para este jugador.")
+        else:
+            strengths = readable_blocks.sort_values("Ajuste", ascending=False).head(3)
+            concerns = readable_blocks.sort_values("Ajuste", ascending=True).head(3)
+            left, right = st.columns(2, gap="medium")
+            with left:
+                st.markdown("<div class='detail-section-title'>Áreas de mayor encaje</div>", unsafe_allow_html=True)
+                blocks_html = ['<div class="detail-block-stack">']
+                for _, row in strengths.iterrows():
+                    blocks_html.append(detail_block_card(row.get("Área", "Área"), row.get("Ajuste", 0), row.get("Lectura", ""), tone="positive"))
+                blocks_html.append('</div>')
+                st.markdown("".join(blocks_html), unsafe_allow_html=True)
+            with right:
+                st.markdown("<div class='detail-section-title'>Áreas a revisar</div>", unsafe_allow_html=True)
+                blocks_html = ['<div class="detail-block-stack">']
+                for _, row in concerns.iterrows():
+                    blocks_html.append(detail_block_card(row.get("Área", "Área"), row.get("Ajuste", 0), row.get("Lectura", ""), tone="warning"))
+                blocks_html.append('</div>')
+                st.markdown("".join(blocks_html), unsafe_allow_html=True)
+
+    with tab3:
+        if readable_blocks.empty:
+            st.info("No hay detalle completo disponible.")
+        else:
+            st.dataframe(
+                readable_blocks.sort_values("Ajuste", ascending=False),
+                use_container_width=True,
+                hide_index=True,
+                column_config={"Ajuste": st.column_config.ProgressColumn("Ajuste", min_value=0, max_value=100, format="%.1f")},
+            )
+            st.caption("Ajuste mide cercanía del jugador al prototipo del club en cada bloque táctico. La lectura indica la dirección de la diferencia frente al perfil buscado.")
 
 
 def make_player_detail_dialog():
@@ -1329,9 +2253,20 @@ if not team_options:
     st.warning("No hay clubes disponibles para consultar.")
     st.stop()
 
-st.markdown("""
-<div class="sf-header"><div class="sf-logo">⚽</div><div><div class="sf-title">ScoutFit</div>
-<div class="sf-subtitle">Compatibilidad táctica y ciencia de datos para el scouting profesional</div></div></div>
+logo_data_uri = load_logo_data_uri()
+if logo_data_uri:
+    logo_html = f'<div class="sf-logo-img-wrap"><img src="{logo_data_uri}" class="sf-logo-img" alt="ScoutFit logo"></div>'
+else:
+    logo_html = '<div class="sf-logo-fallback">SF</div>'
+
+st.markdown(f"""
+<div class="sf-header">
+    {logo_html}
+    <div>
+        <div class="sf-title"><span class="sf-title-navy">Scout</span><span class="sf-title-pink">Fit</span></div>
+        <div class="sf-subtitle">Compatibilidad táctica y ciencia de datos para scouting profesional</div>
+    </div>
+</div>
 """, unsafe_allow_html=True)
 
 if "pending_team_name" not in st.session_state or st.session_state["pending_team_name"] not in team_options:
@@ -1522,6 +2457,7 @@ pending_context = build_context_key(team_name, formation_final, selected_slot, s
 applied_context = build_context_key(applied_team_name, applied_formation, applied_slot, applied_shortlist_size, applied_exclude_same_team, applied_preferred_foot, applied_min_height, applied_max_value_target)
 st.session_state["applied_context"] = applied_context
 
+
 # ======================================================
 # CÁLCULO CON CACHE DE SESIÓN
 # ======================================================
@@ -1576,7 +2512,7 @@ with height_col:
 metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4, gap="small")
 avg_top = pd.to_numeric(shortlist_df["final_scouting_score_0_100"], errors="coerce").mean()
 
-# Perfil del prototipo/slot seleccionado
+
 
 
 section_left, section_right = st.columns([1, .24], gap="small")
@@ -1588,11 +2524,7 @@ with section_left:
     
     </div></div></div>
     """, unsafe_allow_html=True)
-with section_right:
-    if not shortlist_display.empty:
-        csv_data = shortlist_display.to_csv(index=False).encode("utf-8")
-        safe_team = str(applied_team_name).replace(" ", "_")
-        safe_pos = format_group_pos(applied_slot).replace(" ", "_")
+
 
 selection_context = build_context_key(ranking_context, applied_shortlist_size)
 if st.session_state.get("selection_context") != selection_context:

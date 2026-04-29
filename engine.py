@@ -62,7 +62,7 @@ MERGED_SLOT_PROTOTYPE_APP_READY_FALLBACK_PATH = resource_path(
 # =========================
 # MATRIZ DE JUGADORES
 # =========================
-PLAYER_MATRIX_FULL_PATH = Path("matrizjugadorescompleta.parquet")
+PLAYER_MATRIX_FULL_PATH = Path("matrizjugadorescompleta_top10.parquet")
 
 CANDIDATE_FEATURE_COLS = [
     "n_events_p90", "touches_p90", "passes_p90", "def_actions_p90",

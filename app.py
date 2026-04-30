@@ -1148,87 +1148,7 @@ CONTRAST_FIX_CSS = """
 </style>
 """
 st.markdown(CONTRAST_FIX_CSS, unsafe_allow_html=True)
-FORCE_LIGHT_AND_SLIDER_CSS = """
-<style>
-/* ===== Forzar comportamiento visual claro aunque el navegador esté en modo oscuro ===== */
-:root,
-html,
-body,
-.stApp,
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"],
-[data-testid="stMainBlockContainer"]{
-    color-scheme: light!important;
-}
 
-/* Inputs, selectbox, number input y dropdowns siempre claros */
-input,
-textarea,
-div[data-baseweb="select"] > div,
-div[data-baseweb="input"] > div,
-div[data-baseweb="popover"],
-div[role="listbox"],
-ul[role="listbox"]{
-    background:#ffffff!important;
-    color:var(--navy)!important;
-    border-color:rgba(6,43,79,.16)!important;
-}
-
-div[role="option"],
-div[role="option"] span,
-div[role="option"] p{
-    background:#ffffff!important;
-    color:var(--navy)!important;
-}
-
-div[role="option"]:hover{
-    background:#f8fafc!important;
-}
-
-/* Texto dentro de widgets */
-.stSelectbox input,
-.stNumberInput input,
-.stTextInput input{
-    color:var(--navy)!important;
-    -webkit-text-fill-color:var(--navy)!important;
-}
-
-/* ===== Slider de edad: color de los números encima de la barra ===== */
-.st-key-pref_panel div[data-testid="stSlider"],
-.st-key-pref_panel div[data-testid="stSlider"] *,
-.st-key-pref_panel div[data-baseweb="slider"],
-.st-key-pref_panel div[data-baseweb="slider"] *{
-    color:#F4E6B4!important;
-}
-
-/* Label del slider */
-.st-key-pref_panel div[data-testid="stSlider"] label,
-.st-key-pref_panel div[data-testid="stSlider"] label p{
-    color:rgba(255,255,255,.92)!important;
-    font-weight:850!important;
-}
-
-/* Números de valor del rango */
-.st-key-pref_panel div[data-testid="stSlider"] div,
-.st-key-pref_panel div[data-testid="stSlider"] span,
-.st-key-pref_panel div[data-testid="stSlider"] p{
-    color:#F4E6B4!important;
-    font-weight:850!important;
-}
-
-/* Barra del slider */
-.st-key-pref_panel div[data-testid="stSlider"] [role="slider"]{
-    background:var(--pink)!important;
-    border-color:var(--pink)!important;
-}
-
-/* Mantener el track visible sobre el fondo oscuro */
-.st-key-pref_panel div[data-baseweb="slider"] div{
-    border-color:rgba(255,255,255,.35)!important;
-}
-</style>
-"""
-st.markdown(FORCE_LIGHT_AND_SLIDER_CSS, unsafe_allow_html=True)
 def load_logo_data_uri(path: str | None = None) -> str:
     """Carga el logo local si existe. Si no existe, usa el logo embebido dentro de la app."""
     candidate_paths = []
@@ -2669,6 +2589,82 @@ with pref_col:
 # ======================================================
 # APLICAR BÚSQUEDA SOLO AL OPRIMIR BOTÓN
 # ======================================================
+FINAL_THEME_FIX_CSS = """
+<style>
+/* ===== Mantener widgets claros aunque el navegador esté en modo oscuro ===== */
+:root,
+html,
+body,
+.stApp{
+    color-scheme: light!important;
+}
+
+/* Inputs/selects claros */
+.stSelectbox div[data-baseweb="select"] > div,
+.stNumberInput input,
+.stTextInput input,
+textarea{
+    background:#ffffff!important;
+    color:var(--navy)!important;
+    -webkit-text-fill-color:var(--navy)!important;
+}
+
+/* Opciones desplegables claras */
+div[data-baseweb="popover"],
+div[role="listbox"],
+ul[role="listbox"],
+div[role="option"]{
+    background:#ffffff!important;
+    color:var(--navy)!important;
+}
+
+div[role="option"] p,
+div[role="option"] span{
+    color:var(--navy)!important;
+    -webkit-text-fill-color:var(--navy)!important;
+}
+
+/* ===== Corrección chips de la cancha ===== */
+/* No seleccionados: texto azul oscuro */
+.st-key-pitch_radio_selector div[role="radiogroup"] > label:not(:has(input:checked)),
+.st-key-pitch_radio_selector div[role="radiogroup"] > label:not(:has(input:checked)) p,
+.st-key-pitch_radio_selector div[role="radiogroup"] > label:not(:has(input:checked)) span{
+    color:var(--navy)!important;
+    -webkit-text-fill-color:var(--navy)!important;
+}
+
+/* Seleccionado: texto blanco */
+.st-key-pitch_radio_selector div[role="radiogroup"] > label:has(input:checked),
+.st-key-pitch_radio_selector div[role="radiogroup"] > label:has(input:checked) p,
+.st-key-pitch_radio_selector div[role="radiogroup"] > label:has(input:checked) span{
+    color:#ffffff!important;
+    -webkit-text-fill-color:#ffffff!important;
+}
+
+/* ===== Slider rango de edad ===== */
+/* Título del slider */
+.st-key-pref_panel div[data-testid="stSlider"] label,
+.st-key-pref_panel div[data-testid="stSlider"] label p{
+    color:#ffffff!important;
+    font-weight:900!important;
+}
+
+/* Números encima de la barra */
+.st-key-pref_panel div[data-testid="stSlider"] span,
+.st-key-pref_panel div[data-testid="stSlider"] p{
+    color:#F4E6B4!important;
+    -webkit-text-fill-color:#F4E6B4!important;
+    font-weight:900!important;
+}
+
+/* Manijas del slider */
+.st-key-pref_panel div[data-testid="stSlider"] [role="slider"]{
+    background:var(--pink)!important;
+    border-color:var(--pink)!important;
+}
+</style>
+"""
+st.markdown(FINAL_THEME_FIX_CSS, unsafe_allow_html=True)
 if "has_searched" not in st.session_state:
     st.session_state["has_searched"] = False
 
